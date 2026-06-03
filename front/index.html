@@ -1,17 +1,29 @@
+INDEX 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Módulo de Pedidos - Domicilios Maicao</title>
-    <link rel="stylesheet" href="css/estilos.css">
+    <link rel="stylesheet" href="css/estilo_rian.css">
 </head>
 <body>
 
     <nav class="nav-pruebas">
-        <a href="index.html">Catálogo e Interfaz de Compra</a> | 
-        <a href="registro.html">Módulo Registro</a>
-    </nav>
 
+    <a href="index.html">
+        <img src="../iimg/logo.jpg.jpeg" alt="Logo DomiClick" class="logo-img">
+    </a>
+
+    <h1 class="logo-titulo">DomiClick</h1>
+    <p class="logo-subtitulo">Pide fácil, recibe rápido! </p>
+
+    <div class="nav-links-menu">
+    <a href="index.html">🏠 Inicio</a>
+    <a href="registro.html">👤 Registro</a>
+    <a href="login.html">🔐 Iniciar Sesión</a>
+</div>
+
+</nav>
     <div class="contenedor">
         <h2>Simulación de Compra y Procesamiento Híbrido</h2>
         <p>Este formulario enviará los datos brutos a Node.js, quien calculará los costos con MySQL y ejecutará las operaciones con Python.</p>
@@ -19,17 +31,18 @@
         <div class="grupo-formulario">
             <label>1. Seleccione la Empresa Local (Maicao):</label>
             <select id="compraEmpresa">
-                <option value="1">Restaurante El Sabor Local (Tarifa Envío: $4,000)</option>
-                <option value="2">Farmacia Central Maicao (Tarifa Envío: $3,000)</option>
-            </select>
+
+    <option>
+        Cargando empresas...
+    </option>
+
+</select>
         </div>
 
         <h3>Carrito de Compras Provisional</h3>
         <div id="listaProductos">
-            <div class="item-carrito">
-                <span>1x Producto de Prueba A</span>
-                <strong>$15,000.00</strong>
-            </div>
+
+</div>
             <div class="item-carrito">
                 <span>2x Producto de Prueba B</span>
                 <strong>$10,000.00 (c/u)</strong>
@@ -53,8 +66,57 @@
     </div>
 
     <script>
-        let ultimoPedidoId = null;
-        let empresaSeleccionadaId = null;
+        document.addEventListener('DOMContentLoaded', () => {
+    cargarEmpresas();
+    cargarProductos();
+});
+
+let ultimoPedidoId = null;
+let empresaSeleccionadaId = null;
+
+async function cargarEmpresas() {
+
+    try {
+
+        const respuesta =
+            await fetch(
+                'http://localhost:5000/api/empresas'
+            );
+
+        const empresas =
+            await respuesta.json();
+
+        const select =
+            document.getElementById(
+                'compraEmpresa'
+            );
+
+        select.innerHTML = '';
+
+        empresas.forEach(empresa => {
+
+            select.innerHTML += `
+                <option value="${empresa.id_empresa}">
+                    ${empresa.nombre}
+                    - Envío $${empresa.tarifa_envio}
+                </option>
+            `;
+
+        });
+
+    }
+    catch(error) {
+
+        console.error(error);
+
+        document.getElementById(
+            'compraEmpresa'
+        ).innerHTML =
+        '<option>Error cargando empresas</option>';
+
+    }
+
+}
 
         // Paso 1: Enviar el pedido inicial a la API de Node.js
         async function enviarPedido() {
@@ -71,7 +133,7 @@
             };
 
             try {
-                const respuesta = await fetch('/api/pedidos', {
+                const respuesta = await fetch('http://localhost:5000/api/pedidos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(paquetePedido)
@@ -96,7 +158,7 @@
             if(!ultimoPedidoId) return;
             
             try {
-                const respuesta = await fetch('/api/pedidos/auto-asignar', {
+                const respuesta = await fetch('http://localhost:5000/api/pedidos/auto-asignar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id_pedido: ultimoPedidoId })
@@ -113,13 +175,40 @@
             if(!empresaSeleccionadaId) return;
 
             try {
-                const respuesta = await fetch(`/api/empresas/${empresaSeleccionadaId}/reporte`);
+                const respuesta = await fetch(`http://localhost:5000/api/empresas/${empresaSeleccionadaId}/reporte`);
                 const data = await respuesta.json();
                 document.getElementById('resultadoPedido').innerText = "RESPUESTA MOTOR ANALÍTICO (Python - Reportes):\n" + JSON.stringify(data, null, 2);
             } catch (error) {
                 document.getElementById('resultadoPedido').innerText = "Error en módulo estadístico: " + error.message;
             }
         }
+
+  async function cargarProductos(){
+    try {
+        const respuesta = await fetch('http://localhost:5000/api/productos');
+        const productos = await respuesta.json();
+        let html = '';
+
+        productos.forEach(producto => {
+            html += `
+                <div class="item-carrito">
+                    <span>
+                        🏪 ${producto.empresa || 'Establecimiento'}<br>
+                        📦 ${producto.nombre}
+                    </span>
+                    <strong>
+                        $${producto.precio}
+                    </strong>
+                </div>
+            `;
+        });
+
+        document.getElementById('listaProductos').innerHTML = html;
+    } catch(error) {
+        console.error("Error cargando productos:", error);
+    }
+}
     </script>
+    
 </body>
 </html>

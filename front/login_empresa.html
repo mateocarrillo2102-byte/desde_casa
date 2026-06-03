@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Administración - DomiClick</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+    <nav class="nav-pruebas">
+        <a href="index.html">🏠 Inicio</a> | 
+        <a href="registro-producto.html">📦 Gestionar Inventario</a>
+    </nav>
+
+    <div class="contenedor">
+        <h2>🛠️ Panel Admin: Carga de Inventario</h2>
+        <p>Añada nuevos artículos al catálogo comercial de <strong>El Sitio (ID: 1)</strong>.</p>
+        
+        <form id="formProducto">
+            <div class="grupo-formulario">
+                <label>Nombre del Producto / Platillo:</label>
+                <input type="text" id="prodNombre" required placeholder="Ej. Pizza Familiar Mixta">
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>Precio de Venta ($ COP):</label>
+                <input type="number" id="prodPrecio" required placeholder="Ej. 25000" min="0">
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>Cantidad Inicial en Stock:</label>
+                <input type="number" id="prodStock" required placeholder="Ej. 15" min="0">
+            </div>
+            
+            <button type="submit" class="btn" style="background-color: #2c3e50;">Publicar en Catálogo</button>
+        </form>
+
+        <h3>Estado de la Transacción:</h3>
+        <div id="resultadoOperacion" class="json-alerta">Esperando nuevo artículo...</div>
+    </div>
+    
+    <script>
+        document.getElementById('formProducto').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const resultadoDiv = document.getElementById('resultadoOperacion');
+            
+            // Construcción del payload asumiendo temporalmente el ID corporativo 1
+           // Captura los parámetros de la URL de forma automática
+         const parametrosURL = new URLSearchParams(window.location.search);
+// Si no encuentra el parámetro '?id_empresa=', por defecto usará el 1
+            const idEmpresaDetectado = parametrosURL.get('id_empresa') || 1; 
+
+            const nuevoProducto = {
+                id_empresa: idEmpresaDetectado, // Asignación dinámica automatizada
+                nombre: document.getElementById('prodNombre').value,
+                precio: document.getElementById('prodPrecio').value,
+                stock: document.getElementById('prodStock').value
+            };
+
+            try {
+                console.log("📤 Transmitiendo artículo al backend...", nuevoProducto);
+                
+                const respuesta = await fetch('http://localhost:5000/api/productos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nuevoProducto)
+                });
+                
+                const data = await respuesta.json();
+                
+                if (respuesta.status === 201) {
+                    resultadoDiv.className = "json-alerta";
+                    resultadoDiv.style.color = "#27ae60";
+                    resultadoDiv.innerText = `✅ Éxito: ${data.mensaje} (ID Asignado: ${data.id_producto})`;
+                    
+                    // Limpiar el formulario para permitir otra carga ágil
+                    document.getElementById('formProducto').reset();
+                } else {
+                    resultadoDiv.style.color = "#c0392b";
+                    resultadoDiv.innerText = `❌ Error: ${data.error}`;
+                }
+
+            } catch (error) {
+                console.error("Error de comunicación:", error);
+                resultadoDiv.innerText = "Error crítico de red: " + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

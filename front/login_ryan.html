@@ -1,0 +1,120 @@
+LOGIN 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciar Sesión - DomiClick</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<div class="contenedor">
+
+    <h2>🔐 Iniciar Sesión</h2>
+
+    <div class="grupo-formulario">
+        <label>Correo</label>
+        <input type="email" id="correo">
+    </div>
+
+    <div class="grupo-formulario">
+        <label>Contraseña</label>
+        <input type="password" id="password">
+    </div>
+
+    <button class="btn btn-exito" onclick="iniciarSesion()">
+        Ingresar
+    </button>
+
+    <div
+        id="resultadoLogin"
+        class="json-alerta"
+        style="margin-top:20px;">
+    </div>
+
+</div>
+
+<script>
+
+async function iniciarSesion() {
+
+    const datos = {
+
+        correo:
+            document.getElementById('correo').value,
+
+        password:
+            document.getElementById('password').value
+
+    };
+
+    try {
+
+        const respuesta =
+            await fetch(
+                'http://localhost:3000/api/login',
+                {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json'
+                    },
+                    body: JSON.stringify(datos)
+                }
+            );
+
+        const data =
+            await respuesta.json();
+            localStorage.setItem(
+    'id_usuario',
+    data.id_usuario
+);
+
+localStorage.setItem(
+    'rol',
+    data.rol
+);
+
+localStorage.setItem(
+    'id_empresa',
+    data.id_empresa || ''
+);
+
+        document.getElementById(
+    'resultadoLogin'
+).innerHTML =
+    data.mensaje;
+
+if(data.rol === 'cliente'){
+
+    window.location.href =
+        'panel-cliente.html';
+
+}
+
+if(data.rol === 'empresa'){
+
+    window.location.href =
+        'panel-empresa.html';
+
+}
+
+if(data.rol === 'domiciliario'){
+
+    window.location.href =
+        'panel-repartidor.html';
+
+}
+
+    }
+    catch(error){
+
+        console.error(error);
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>

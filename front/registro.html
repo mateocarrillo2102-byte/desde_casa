@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Prueba de Registro - Domicilios Maicao</title>
-    <link rel="stylesheet" href="css/estilos.css">
+    <link rel="stylesheet" href="../css/estilos.css">
 </head>
 <body>
 
     <nav class="nav-pruebas">
-        <a href="index.html">Catálogo e Interfaz de Compra</a> | 
+        <a href="../index.html">Catálogo e Interfaz de Compra</a> | 
         <a href="registro.html">Módulo Registro</a>
     </nav>
 
@@ -35,7 +35,7 @@
             </div>
             <div class="grupo-formulario">
                 <label>Método de Pago Preferido:</label>
-                <select id="regPago">
+                <select id="regmetodoPago">
                     <option value="Efectivo">Efectivo</option>
                     <option value="Nequi">Nequi</option>
                     <option value="Daviplata">Daviplata</option>
@@ -53,24 +53,40 @@
         document.getElementById('formRegistro').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const payload = {
-                nombre: document.getElementById('regNombre').value,
-                telefono: document.getElementById('regTelefono').value,
-                email: document.getElementById('regEmail').value,
-                contrasena: document.getElementById('regContrasena').value,
-                metodoPago: document.getElementById('regPago').value
-            };
-
             try {
-                const respuesta = await fetch('/api/usuarios', {
+                // CORRECCIÓN 1: Estructuramos el payload apuntando a los IDs correctos del HTML
+                const payload = {
+                    nombre: document.getElementById('regNombre').value,
+                    telefono: document.getElementById('regTelefono').value,
+                    email: document.getElementById('regEmail').value,
+                    contrasena: document.getElementById('regContrasena').value,
+                    // Corregido: Ahora apunta a 'regmetodoPago' que es el ID real del <select>
+                    metodo_pago: document.getElementById('regmetodoPago').value 
+                };
+
+                // Imprimimos en la consola del navegador para certificar que el HTML empaquetó todo bien
+                console.log("📤 Enviando datos desde el formulario:", payload);
+                
+                // CORRECCIÓN 2: Añadimos la dirección absoluta con el puerto 5000
+                const respuesta = await fetch('http://localhost:5000/api/usuarios', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+                
                 const data = await respuesta.json();
+                
+                // Mostrar la respuesta estética en el recuadro asignado
                 document.getElementById('resultadoRegistro').innerText = JSON.stringify(data, null, 2);
+                
+                // Si el registro es exitoso, limpiar el formulario para una nueva prueba
+                if (respuesta.status === 201) {
+                    document.getElementById('formRegistro').reset();
+                }
+
             } catch (error) {
-                document.getElementById('resultadoRegistro').innerText = "Error de conexión: " + error.message;
+                console.error("❌ Error en el flujo del Frontend:", error);
+                document.getElementById('resultadoRegistro').innerText = "Error en el formulario: " + error.message;
             }
         });
     </script>

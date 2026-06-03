@@ -1,0 +1,293 @@
+CSS 
+/* ==========================================================================
+   CSS OPTIMIZADO - PLATAFORMA MAICAO
+   ========================================================================== */
+
+/* 1. RESET Y BASE */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+body {
+    background: linear-gradient(rgba(244, 246, 249, 0.3), rgba(244, 246, 249, 0.3)), 
+                url('../../iimg/Gemini_Generated_Image_m3ot5wm3ot5wm3ot.png') center/cover fixed;
+    padding: 20px; min-height: 100vh;
+}
+
+/* 2. NAVEGACIÓN (Efecto Cristal) */
+.nav-pruebas {
+    max-width: 600px;
+    margin: 10px auto;
+    
+
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(15px);
+
+    min-height: auto;
+    border-radius: 25px;
+    
+    text-align: center;
+
+    border: 1px solid rgba(255,255,255,0.4);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    gap: 8px;
+
+    box-shadow:
+        0 10px 30px rgba(0,0,0,0.15);
+}
+
+.logo-img {
+    width: 140px;
+    height: 140px;
+
+    border-radius: 50%;
+    object-fit: cover;
+
+    border: 5px solid rgba(255,255,255,0.9);
+
+    box-shadow:
+        0 10px 25px rgba(0,0,0,0.20),
+        0 0 25px rgba(255,193,7,0.35);
+
+    transition: all 0.3s ease;
+
+    display: block;
+}
+
+.logo-img:hover {
+    transform: scale(1.05);
+}
+.logo-titulo{
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #d97706;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.logo-subtitulo::after{
+    content: "";
+    display: block;
+    width: 80px;
+    height: 3px;
+    background: #f59e0b;
+    margin: 10px auto 0;
+    border-radius: 10px;
+}
+
+.nav-links-menu{
+    display:flex;
+    justify-content:center;
+    gap:40px;
+}
+
+.nav-links-menu a{
+    text-decoration:none;
+    color:#1e293b;
+    font-weight:700;
+    position:relative;
+}
+
+.nav-links-menu a:hover{
+    color:#f59e0b;
+}
+
+.nav-links-menu a.activo::after{
+    content:'';
+    position:absolute;
+    left:0;
+    bottom:-8px;
+    width:100%;
+    height:3px;
+    background:#f59e0b;
+    border-radius:5px;
+}
+
+/* 3. CONTENEDOR PRINCIPAL */
+.contenedor { 
+    max-width: 600px; 
+    margin: 10px auto; 
+    background: rgba(255, 255, 255, 0.96); 
+    padding: 30px; 
+    border-radius: 12px; 
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); 
+}
+
+/* 4. FORMULARIOS Y BOTONES */
+.grupo-formulario { margin-bottom: 20px; }
+.grupo-formulario label { display: block; font-weight: 600; color: #4a5568; margin-bottom: 8px; }
+
+input, select {
+    width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; outline: none;
+}
+
+.btn { width: 100%; padding: 14px; font-weight: bold; color: #fff; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+.btn-exito { background: #2ecc71; }
+.btn:hover { filter: brightness(0.9); }
+
+.json-alerta { background: #e8f4f8; border-left: 5px solid #3498db; padding: 12px; margin-top: 15px; font-family: monospace; font-size: 13px; color: #234e65; }
+
+.form-header{
+    text-align:center;
+    margin-bottom:25px;
+}
+
+.form-logo{
+    width:80px;
+    height:80px;
+
+    border-radius:50%;
+    object-fit:cover;
+
+    box-shadow:
+        0 5px 15px rgba(0,0,0,.15);
+}
+
+.form-header h2{
+    margin-top:10px;
+    color:#d97706;
+}
+
+.form-header p{
+    color:#64748b;
+    margin-top:8px;
+}
+
+.barra-progreso{
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    margin:25px 0 10px;
+}
+
+.paso{
+
+    width:40px;
+    height:40px;
+
+    border-radius:50%;
+
+    background:#d1d5db;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-weight:bold;
+}
+
+.paso.activo{
+
+    background:#f59e0b;
+
+    color:white;
+}
+
+.linea{
+
+    width:70px;
+    height:4px;
+
+    background:#d1d5db;
+}
+
+.texto-progreso{
+
+    text-align:center;
+
+    color:#64748b;
+
+    margin-bottom:20px;
+}
+
+.roles-container{
+
+    display:flex;
+
+    gap:15px;
+
+    justify-content:center;
+
+    margin-top:10px;
+}
+
+.rol-card{
+
+    flex:1;
+
+    background:white;
+
+    border:2px solid #e5e7eb;
+
+    border-radius:15px;
+
+    padding:20px 10px;
+
+    text-align:center;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:10px;
+
+    font-size:1.2rem;
+}
+
+.rol-card:hover{
+
+    transform:translateY(-5px);
+
+    box-shadow:
+        0 8px 20px rgba(0,0,0,.08);
+}
+
+.rol-card.activo{
+
+    border-color:#f59e0b;
+
+    background:#fff7ed;
+
+    box-shadow:
+        0 0 15px rgba(245,158,11,.25);
+}
+
+.rol-card span{
+
+    font-size:.9rem;
+
+    font-weight:600;
+}
+
+.contenedor{
+
+    animation: aparecer .6s ease;
+}
+
+@keyframes aparecer{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(20px);
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0);
+    }
+}

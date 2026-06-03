@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acceso al Sistema - Desde Casa</title>
+    <link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body>
+    <div class="contenedor">
+        <h2>Inicio de Sesión Unificado</h2>
+        <form id="formLogin">
+            <div class="grupo-formulario">
+                <label>Correo Electrónico:</label>
+                <input type="email" id="logEmail" required placeholder="correo@ejemplo.com">
+            </div>
+            <div class="grupo-formulario">
+                <label>Contraseña:</label>
+                <input type="password" id="logContrasena" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn">Ingresar al Sistema</button>
+        </form>
+        <div id="alertaLogin" class="json-alerta">Esperando credenciales...</div>
+    </div>
+
+    <script>
+        document.getElementById('formLogin').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Evitar que la página se recargue
+
+            // Reutilizamos el cuadro gris o el elemento de alertas que tenga en su HTML
+            // (Asegúrese de que el ID coincida con su contenedor de alertas, ej: 'alertaLogin')
+            const alerta = document.getElementById('alertaLogin') || document.createElement('div');
+            alerta.id = 'alertaLogin';
+            alerta.innerText = "Verificando credenciales en el sistema...";
+            if (!document.getElementById('alertaLogin')) {
+                document.getElementById('formLogin').appendChild(alerta);
+            }
+
+            const payload = {
+                email: document.getElementById('logEmail').value,
+                contrasena: document.getElementById('logContrasena').value
+            };
+
+            try {
+                // Petición formal al endpoint virtual unificado de login
+                const respuesta = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // Leemos como texto primero para blindar el flujo
+                const textoPlano = await respuesta.text();
+                console.log("Respuesta del servidor:", textoPlano);
+                
+                const data = JSON.parse(textoPlano);
+
+                if (respuesta.ok) {
+                    alerta.innerHTML = `<strong>¡Acceso Concedido!</strong><br>Bienvenido, ${data.nombre} (${data.rol})`;
+                    
+                    // Guardar los datos de sesión en el navegador por seguridad
+                    localStorage.setItem('usuarioId', data.id);
+                    localStorage.setItem('usuarioRol', data.role || data.rol);
+                    localStorage.setItem('usuarioNombre', data.nombre);
+
+                    // Redirección inteligente según el rol que devolvió MySQL
+                    setTimeout(() => {
+                        if (data.rol === 'Empresa') {
+                            window.location.href = 'login_empresa.html'; // O el nombre de su panel corporativo
+                        } else if (data.rol === 'Domiciliario') {
+                            window.location.href = 'panel-domiciliario.html';
+                        } else {
+                            window.location.href = 'login_cliente.html'; // Clientes van al catálogo de inicio
+                        }
+                    }, 1500);
+
+                } else {
+                    // Si las credenciales no existen o la contraseña está mal escrita
+                    alerta.innerText = "Error de acceso: " + (data.error || "Credenciales incorrectas.");
+                }
+
+            } catch (error) {
+                alerta.innerText = "Error crítico: El servidor de Node.js no responde.";
+                console.error("Detalle del error:", error);
+            }
+        });
+    </script>
+</body>
+</html>

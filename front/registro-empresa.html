@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro Corporativo - Desde Casa</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+    <div class="contenedor">
+        <h2>Afiliar Nueva Empresa (Maicao)</h2>
+        <form id="formRegEmpresa">
+            <div class="grupo-formulario"><label>Nombre del Establecimiento:</label><input type="text" id="empNombre" required></div>
+            <div class="grupo-formulario"><label>Dirección Física:</label><input type="text" id="empDireccion" required></div>
+            <div class="grupo-formulario"><label>Teléfono Comercial:</label><input type="text" id="empTelefono" required></div>
+            <div class="grupo-formulario"><label>Tipo de Negocio:</label><input type="text" id="empTipo" placeholder="Restaurante, Droguería"></div>
+            <div class="grupo-formulario"><label>Tarifa Fija de Envío ($):</label><input type="number" id="empTarifa" value="2000"></div>
+            <div class="grupo-formulario"><label>Correo de Administrador:</label><input type="email" id="empEmail" required></div>
+            <div class="grupo-formulario"><label>Contraseña de Acceso:</label><input type="password" id="empContrasena" required></div>
+            <button type="submit" class="btn btn-exito">Crear Cuenta Corporativa</button>
+        </form>
+        <div id="alertaEmpresa" class="json-alerta">Esperando envío...</div>
+    </div>
+
+    <script>
+        document.getElementById('formRegEmpresa').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            const alerta = document.getElementById('alertaEmpresa');
+            alerta.innerText = "Enviando datos al servidor...";
+
+            const payload = {
+                nombre: document.getElementById('empNombre').value,
+                direccion: document.getElementById('empDireccion').value,
+                telefono: document.getElementById('empTelefono').value,
+                tipo: document.getElementById('empTipo').value,
+                tarifa_envio: parseFloat(document.getElementById('empTarifa').value) || 0,
+                email: document.getElementById('empEmail').value,
+                contrasena: document.getElementById('empContrasena').value // Enviamos 'contrasena' con n al backend
+            };
+
+            try {
+                const respuesta = await fetch('http://localhost:5000/api/empresa/registro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // Leemos el texto puro primero para evitar que .json() congele la pantalla si viene vacío
+                const textoPlano = await respuesta.text();
+                console.log("Respuesta cruda del servidor:", textoPlano);
+                
+                const data = JSON.parse(textoPlano);
+
+                if (respuesta.ok) {
+                    alerta.innerHTML = `<strong>¡Registro Exitoso!</strong><br>Empresa ID: ${data.id_empresa}<br>Guardado en MySQL.`;
+                    document.getElementById('formRegEmpresa').reset();
+                    
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    alerta.innerText = "Error del servidor: " + (data.error || "Datos rechazados.");
+                }
+
+            } catch (error) {
+                alerta.innerText = "Error crítico: El servidor no respondió o envió datos corruptos.";
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>
