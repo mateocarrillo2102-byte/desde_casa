@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Analítica de Rendimiento de Productos - DomiClick</title>
+    <link rel="stylesheet" href="./css/dashboard.css">
+    <style>
+        .filter-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 12px;
+            align-items: center;
+        }
+        .select-custom {
+            background: #2a2d4a;
+            color: white;
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+        }
+        .analytics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .analytics-table th {
+            background: #2a2d4a;
+            color: #b5aeff;
+            text-align: left;
+            padding: 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .analytics-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+        .analytics-table tr:hover {
+            background: rgba(108, 93, 211, 0.05);
+        }
+        .badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-success { background: rgba(124, 211, 142, 0.15); color: var(--green-success); }
+        .badge-danger { background: rgba(255, 117, 76, 0.15); color: var(--red-danger); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <div class="header-top">
+            <div>
+                <h1 id="lblNombreEmpresa">📊 Rendimiento Comercial de Productos</h1>
+                <span style="color: var(--text-muted); font-size: 14px;">Módulo de auditoría y ordenamiento de inventario</span>
+            </div>
+            <a href="login_empresa.html" class="btn-action" style="background: #2a2d4a; color: white;">📋 Volver al Dashboard</a>
+        </div>
+
+        <div class="filter-bar">
+            <span style="color: var(--text-muted); font-size: 14px; font-weight: 600;">Ordenar catálogo por:</span>
+            <select id="cmbCriterio" class="select-custom" onchange="procesarOrdenamiento()">
+                <option value="mas_vendidos">🔥 Más Vendidos (Mayor rotación)</option>
+                <option value="menos_vendidos">❄️ Menos Vendidos (Baja rotación)</option>
+                <option value="mayor_stock">📦 Mayor Existencia en Stock</option>
+                <option value="menor_stock">⚠️ Alerta de Stock Mínimo</option>
+            </select>
+        </div>
+
+        <div class="card" style="padding: 0;">
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre del Artículo</th>
+                        <th>Precio Unitario</th>
+                        <th>Unidades Vendidas</th>
+                        <th>Stock Disponible</th>
+                        <th>Estado de Inventario</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyProductos">
+                    </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        // Almacenamiento local para evitar llamadas excesivas al servidor durante el ordenamiento
+        let cacheProductos = [];
+
+        window.onload = async function() {
+            const idEmpresa = localStorage.getItem('id_empresa') || '1';
+            
+            try {
+                // Consumimos el endpoint de productos que ya tiene implementado en su server.js
+                const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresa}/productos`);
+                if (!respuesta.ok) throw new Error("Error al consultar el catálogo");
+                
+                const productos = await respuesta.json();
+                
+                // Mapeamos los productos y simulamos de forma académica la métrica de unidades vendidas 
+                // para que pueda probar la ordenación de inmediato en su entrega antes de poblar DETALLE_PEDIDO
+                cacheProductos = productos.map(p => ({
+                    id_producto: p.id_producto,
+                    nombre: p.nombre,
+                    precio: parseFloat(p.precio),
+                    stock: parseInt(p.stock),
+                    // Simulación determinista basada en el ID para pruebas locales dinámicas
+                    unidades_vendidas: Math.floor(((p.id_producto * 7) % 45) + (p.stock % 3)) 
+                }));
+
+                // Forzar renderizado inicial por el criterio por defecto
+                procesarOrdenamiento();
+
+            } catch (error) {
+                console.error("❌ Fallo crítico en el script analítico:", error);
+                document.getElementById('tbodyProductos').innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--red-danger);">Error de conexión con el backend de DomiClick.</td></tr>`;
+            }
+        };
+
+        function procesarOrdenamiento() {
+            const criterio = document.getElementById('cmbCriterio').value;
+            
+            // Clonamos la lista para realizar el ordenamiento de arreglos en memoria (Client-side)
+            let productosOrdenados = [...cacheProductos];
+
+            if (criterio === "mas_vendidos") {
+                productosOrdenados.sort((a, b) => b.unidades_vendidas - a.unidades_vendidas);
+            } else if (criterio === "menos_vendidos") {
+                productosOrdenados.sort((a, b) => a.unidades_vendidas - b.unidades_vendidas);
+            } else if (criterio === "mayor_stock") {
+                productosOrdenados.sort((a, b) => b.stock - a.stock);
+            } else if (criterio === "menor_stock") {
+                productosOrdenados.sort((a, b) => a.stock - b.stock);
+            }
+
+            renderizarTabla(productosOrdenados);
+        }
+
+        function renderizarTabla(lista) {
+            const tbody = document.getElementById('tbodyProductos');
+            tbody.innerHTML = "";
+
+            if (lista.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No se encontraron productos registrados en este comercio.</td></tr>`;
+                return;
+            }
+
+            lista.forEach(p => {
+                // Lógica de semáforo para determinar el estado físico del stock
+                let badgeEstado = `<span class="badge badge-success">Abundante</span>`;
+                if (p.stock <= 0) {
+                    badgeEstado = `<span class="badge badge-danger">Agotado</span>`;
+                } else if (p.stock <= 5) {
+                    badgeEstado = `<span class="badge badge-danger" style="background: rgba(255,117,76,0.1); color: #ffbc75;">Crítico</span>`;
+                }
+
+                const fila = `
+                    <tr>
+                        <td style="color: var(--text-muted); font-weight: bold;">#${p.id_producto}</td>
+                        <td><strong>${p.nombre}</strong></td>
+                        <td>$${p.precio.toLocaleString('es-CO')}</td>
+                        <td style="font-weight: 700; color: #b5aeff;">${p.unidades_vendidas} unds</td>
+                        <td>${p.stock}</td>
+                        <td>${badgeEstado}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += fila;
+            });
+        }
+    </script>
+</body>
+</html>

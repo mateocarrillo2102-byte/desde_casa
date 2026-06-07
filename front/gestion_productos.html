@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Inventario - DomiClick</title>
+    <link rel="stylesheet" href="./css/gestion_productos.css">
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="navigation-header">
+            <div>
+                <h1 style="margin: 0; font-size: 26px;">📦 Catálogo de Productos</h1>
+                <p style="margin: 4px 0 0 0; color: var(--text-muted);" id="lblNombreEmpresa">Identificando sucursal...</p>
+            </div>
+            
+            <div class="action-buttons">
+                <a href="login_empresa.html" class="btn-nav btn-secondary">⬅ Volver al Dashboard</a>
+                <a href="reg_producto.html" class="btn-nav btn-purple">➕ Agregar Nuevo Producto</a>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <input type="text" id="txtBusqueda" class="search-input" placeholder="Buscar por nombre del artículo o platillo..." oninput="cargarProductos()">
+            
+            <select id="selectDisponibilidad" class="filter-select" onchange="cargarProductos()">
+                <option value="todos">🔍 Mostrar todos</option>
+                <option value="disponibles">🟢 Disponibles</option>
+                <option value="agotados">🔴 Agotados</option>
+            </select>
+        </div>
+
+        <div class="products-grid" id="contenedorProductos">
+            </div>
+
+    </div>
+
+    <script>
+        let tipoEmpresa = "";
+
+        window.onload = async function() {
+    // Validar y asegurar el ID de la empresa en la sesión del cliente
+    if (!localStorage.getItem('id_empresa') || localStorage.getItem('id_empresa') === 'null') {
+        localStorage.setItem('id_empresa', '1');
+    }
+    
+    const idEmpresa = localStorage.getItem('id_empresa');
+    
+    try {
+        // Consultar el endpoint analítico modificado con el ALIAS para evadir el error de 'tlpo'
+        const resEmpresa = await fetch(`http://localhost:5000/api/empresas/${idEmpresa}/analitica-avanzada`);
+        if (resEmpresa.ok) {
+            const datos = await resEmpresa.json();
+            tipoEmpresa = datos.tipo ? datos.tipo.toLowerCase() : "";
+            document.getElementById('lblNombreEmpresa').innerText = `Inventario activo de: ${datos.nombre}`;
+        }
+    } catch (err) {
+        console.error("Error al sincronizar metadatos del comercio:", err);
+    }
+
+    // Una vez asegurada la metadata, invocar el catálogo de la base de datos
+    cargarProductos();
+}
+
+        async function cargarProductos() {
+            const idEmpresa = localStorage.getItem('id_empresa');
+            const terminoBusqueda = encodeURIComponent(document.getElementById('txtBusqueda').value);
+            const filtroDisponibilidad = document.getElementById('selectDisponibilidad').value;
+            const contenedor = document.getElementById('contenedorProductos');
+
+            try {
+                const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresa}/productos?buscar=${terminoBusqueda}`);
+                if (!respuesta.ok) throw new Error("Error en la respuesta del servidor");
+                
+                let productos = await respuesta.json();
+
+                if (filtroDisponibilidad === "disponibles") {
+                    productos = productos.filter(p => p.stock > 0);
+                } else if (filtroDisponibilidad === "agotados") {
+                    productos = productos.filter(p => p.stock <= 0);
+                }
+
+                contenedor.innerHTML = "";
+
+                if (productos.length === 0) {
+                    contenedor.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">No hay productos registrados con esos criterios.</p>`;
+                    return;
+                }
+
+                productos.forEach(prod => {
+                    const esRestaurante = (tipoEmpresa === "restaurante" || tipoEmpresa === "comida");
+                    let stockTexto = `Stock: ${prod.stock} uds`;
+                    let badgeEstilo = "background: #233547; color: var(--green-success);";
+
+                    if (esRestaurante) {
+                        stockTexto = "Disponibilidad: Ilimitada";
+                    } else if (prod.stock <= 0) {
+                        stockTexto = "Agotado";
+                        badgeEstilo = "background: #3a2434; color: var(--red-danger);";
+                    }
+
+                    const icono = esRestaurante ? "🍔" : "📦";
+
+                    contenedor.innerHTML += `
+                        <div class="product-card">
+                            <div>
+                                <div class="product-icon">${icono}</div>
+                                <h3 class="product-title">${prod.nombre}</h3>
+                                <div class="product-price">$${parseFloat(prod.precio).toLocaleString('es-CO')}</div>
+                                <span class="stock-badge" style="${badgeEstilo}">${stockTexto}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+            } catch (error) {
+                console.error("Fallo de comunicación:", error);
+                contenedor.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--red-danger); padding: 20px; font-weight: bold;">⚠️ Error de comunicación con el servidor Node. Verifique la terminal.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

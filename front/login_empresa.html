@@ -2,90 +2,166 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Administración - DomiClick</title>
-    <link rel="stylesheet" href="css/estilos.css">
+    <title>Executive Dashboard - DomiClick</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="./css/dashboard.css">
 </head>
 <body>
 
-    <nav class="nav-pruebas">
-        <a href="index.html">🏠 Inicio</a> | 
-        <a href="registro-producto.html">📦 Gestionar Inventario</a>
-    </nav>
-
-    <div class="contenedor">
-        <h2>🛠️ Panel Admin: Carga de Inventario</h2>
-        <p>Añada nuevos artículos al catálogo comercial de <strong>El Sitio (ID: 1)</strong>.</p>
+    <div class="dashboard-container">
         
-        <form id="formProducto">
-            <div class="grupo-formulario">
-                <label>Nombre del Producto / Platillo:</label>
-                <input type="text" id="prodNombre" required placeholder="Ej. Pizza Familiar Mixta">
+        <div class="header-top">
+            <div>
+                <h1 id="lblNombreEmpresa">🏪 Cargando Panel Corporativo...</h1>
+                <span style="color: var(--text-muted); font-size: 14px;" id="lblTipoEmpresa">Establecimiento comercial</span>
             </div>
-            
-            <div class="grupo-formulario">
-                <label>Precio de Venta ($ COP):</label>
-                <input type="number" id="prodPrecio" required placeholder="Ej. 25000" min="0">
-            </div>
-            
-            <div class="grupo-formulario">
-                <label>Cantidad Inicial en Stock:</label>
-                <input type="number" id="prodStock" required placeholder="Ej. 15" min="0">
-            </div>
-            
-            <button type="submit" class="btn" style="background-color: #2c3e50;">Publicar en Catálogo</button>
-        </form>
+            <a href="gestion_productos.html" class="btn-action">📦 Gestionar Catálogo</a>
+        </div>
 
-        <h3>Estado de la Transacción:</h3>
-        <div id="resultadoOperacion" class="json-alerta">Esperando nuevo artículo...</div>
+        <div class="grid-layout">
+            
+            <div class="card">
+                <h3 class="card-title">Invoice Overview</h3>
+                <div class="invoice-box">
+                    <div class="revenue-sidebar">
+                        <span style="color: var(--text-muted); font-size: 13px;">Total Revenue</span>
+                        <div class="revenue-total" id="txtTotalRevenue">$0,00</div>
+                        <span style="color: var(--green-success); font-size: 12px;">📈 +16.3% este mes</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="chartBarras"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Order Stats</h3>
+                <div class="dona-wrapper">
+                    <canvas id="chartDona"></canvas>
+                </div>
+                <ul class="list-data">
+                    <li class="list-item"><span>🟣 Completado</span><strong id="txtCompleto">0</strong></li>
+                    <li class="list-item"><span>🟢 En Proceso</span><strong id="txtProceso">0</strong></li>
+                    <li class="list-item"><span>🔴 Cancelado</span><strong id="txtCancelado">0</strong></li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="grid-layout">
+            
+            <div class="card">
+                <h3 class="card-title">Product Tracking</h3>
+                <div class="list-item" style="border-bottom: none;">
+                    <div>
+                        <strong>Nuevas Órdenes Recibidas</strong>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Pendientes por despacho en cocina</div>
+                    </div>
+                    <span class="btn-action" style="background: #2a2d4a; color: #b5aeff; margin: 0; cursor: pointer;">Ver lista</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Best Selling Product</h3>
+                <div class="product-showcase">
+                    <div class="product-img">🍔</div>
+                    <div>
+                        <strong id="txtBestSellerNombre" style="font-size: 16px;">Cargando...</strong>
+                        <div id="txtBestSellerPrecio" style="color: #b5aeff; font-weight: 700; margin-top: 4px;">$0</div>
+                    </div>
+                </div>
+                <a href="eco_productos.html" class="btn-action" style="margin-top: 20px; width: 100%; text-align: center; box-sizing: border-box; background: #2a2d4a; color: #b5aeff;">📊 Ver Estadísticas Detalladas</a>
+            </div>
+
+        </div>
+
     </div>
-    
+
     <script>
-        document.getElementById('formProducto').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        window.onload = async function() {
+            // Garantizar la existencia de una sesión activa en localStorage
+            if (!localStorage.getItem('id_empresa') || localStorage.getItem('id_empresa') === 'null') {
+                console.warn("⚠️ Sesión no detectada. Inicializando con empresa de pruebas (ID: 1).");
+                localStorage.setItem('id_empresa', '1');
+            }
             
-            const resultadoDiv = document.getElementById('resultadoOperacion');
+            const idEmpresa = localStorage.getItem('id_empresa');
             
-            // Construcción del payload asumiendo temporalmente el ID corporativo 1
-           // Captura los parámetros de la URL de forma automática
-         const parametrosURL = new URLSearchParams(window.location.search);
-// Si no encuentra el parámetro '?id_empresa=', por defecto usará el 1
-            const idEmpresaDetectado = parametrosURL.get('id_empresa') || 1; 
-
-            const nuevoProducto = {
-                id_empresa: idEmpresaDetectado, // Asignación dinámica automatizada
-                nombre: document.getElementById('prodNombre').value,
-                precio: document.getElementById('prodPrecio').value,
-                stock: document.getElementById('prodStock').value
-            };
-
             try {
-                console.log("📤 Transmitiendo artículo al backend...", nuevoProducto);
+                const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresa}/analitica-avanzada`);
+                if (!respuesta.ok) throw new Error("Fallo en respuesta del servidor");
                 
-                const respuesta = await fetch('http://localhost:5000/api/productos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(nuevoProducto)
-                });
+                const datos = await respuesta.json();
                 
-                const data = await respuesta.json();
+                // Inyectar de manera segura la metadata dinámica desde el backend
+                document.getElementById('lblNombreEmpresa').innerText = `🏪 ${datos.nombre}`; 
+                document.getElementById('lblTipoEmpresa').innerText = `Establecimiento comercial: ${datos.tipo}`;
+                document.getElementById('txtTotalRevenue').innerText = `$${parseFloat(datos.resumenFinanciero.revenueTotal).toLocaleString('es-CO')}`;
                 
-                if (respuesta.status === 201) {
-                    resultadoDiv.className = "json-alerta";
-                    resultadoDiv.style.color = "#27ae60";
-                    resultadoDiv.innerText = `✅ Éxito: ${data.mensaje} (ID Asignado: ${data.id_producto})`;
-                    
-                    // Limpiar el formulario para permitir otra carga ágil
-                    document.getElementById('formProducto').reset();
+                document.getElementById('txtCompleto').innerText = datos.graficoDona.completados;
+                document.getElementById('txtProceso').innerText = datos.graficoDona.procesando;
+                document.getElementById('txtCancelado').innerText = datos.graficoDona.cancelados;
+
+                if(datos.bestSeller && datos.bestSeller.nombre !== "Ninguno") {
+                    document.getElementById('txtBestSellerNombre').innerText = datos.bestSeller.nombre;
+                    document.getElementById('txtBestSellerPrecio').innerText = `$${parseFloat(datos.bestSeller.precio).toLocaleString('es-CO')}`;
                 } else {
-                    resultadoDiv.style.color = "#c0392b";
-                    resultadoDiv.innerText = `❌ Error: ${data.error}`;
+                    document.getElementById('txtBestSellerNombre').innerText = "Sin ventas aún";
+                    document.getElementById('txtBestSellerPrecio').innerText = "$0";
                 }
+                
+                // Inicializar renderizado de componentes visuales (Chart.js)
+                construirGraficos(datos);
 
             } catch (error) {
-                console.error("Error de comunicación:", error);
-                resultadoDiv.innerText = "Error crítico de red: " + error.message;
+                console.error("❌ Error al conectar con Node.js:", error);
             }
-        });
+        }
+
+        function construirGraficos(datos) {
+            // 1. Gráfico de Barras (Invoice Overview)
+            const ctxBarras = document.getElementById('chartBarras').getContext('2d');
+            new Chart(ctxBarras, {
+                type: 'bar',
+                data: {
+                    labels: datos.graficoBarras.labels,
+                    datasets: [{
+                        label: 'Ventas Mensuales ($)',
+                        data: datos.graficoBarras.valores,
+                        backgroundColor: '#6c5dd3',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#2a2d4a' }, ticks: { color: '#808191' } },
+                        x: { grid: { display: false }, ticks: { color: '#808191' } }
+                    }
+                }
+            });
+
+            // 2. Gráfico de Dona (Order Stats)
+            const ctxDona = document.getElementById('chartDona').getContext('2d');
+            new Chart(ctxDona, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completado', 'En Proceso', 'Cancelado'],
+                    datasets: [{
+                        data: [datos.graficoDona.completados, datos.graficoDona.procesando, datos.graficoDona.cancelados],
+                        backgroundColor: ['#6c5dd3', '#7cd38e', '#ff754c'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
     </script>
 </body>
 </html>

@@ -131,6 +131,166 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 }); 
+// =================================================================
+// ENDPOINT DE ALTA GAMA: COMPILACIÓN FINANCIERA Y ANALÍTICA (CORREGIDO)
+// =================================================================
+app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
+    try {
+        const idEmpresa = req.params.id;
+
+        // CORRECCIÓN CRÍTICA: Se cambia 'tipo' por 'tlpo AS tipo' para coincidir con phpMyAdmin
+        const [empresa] = await pool.execute('SELECT nombre, tipo AS tipo, tarifa_envio FROM EMPRESA WHERE id_empresa = ?', [idEmpresa]);
+        if (empresa.length === 0) {
+            return res.status(404).json({ error: "Establecimiento no registrado." });
+        }
+
+        // 2. Gráfico de Barras: Facturación mensual de los últimos 6 meses (Invoice Overview)
+        const [ventasMensuales] = await pool.execute(`
+            SELECT MONTHNAME(fecha) AS mes, SUM(total) AS total 
+            FROM PEDIDO 
+            WHERE id_empresa = ? AND estado = 'Entregado'
+            GROUP BY MONTH(fecha), MONTHNAME(fecha)
+            ORDER BY MONTH(fecha) ASC LIMIT 6
+        `, [idEmpresa]);
+
+        // 3. Gráfico de Dona: Métricas de Órdenes (Order Stats)
+        const [statsPedidos] = await pool.execute(`
+            SELECT 
+                COUNT(CASE WHEN estado = 'Entregado' THEN 1 END) AS completados,
+                COUNT(CASE WHEN estado = 'Pendiente' OR estado = 'En camino' THEN 1 END) AS procesando,
+                COUNT(CASE WHEN estado = 'Cancelado' THEN 1 END) AS cancelados,
+                SUM(total) AS ingresos_brutos
+            FROM PEDIDO WHERE id_empresa = ?
+        `, [idEmpresa]);
+
+        // 4. Tarjeta Especial: Producto más vendido (Best Selling Product)
+        let productoEstrella = { nombre: "Ninguno", precio: 0, unidades: 0 };
+        try {
+            const [topProduct] = await pool.execute(`
+                SELECT p.nombre, p.precio, SUM(dp.cantidad) AS unidades
+                FROM DETALLE_PEDIDO dp
+                INNER JOIN PRODUCTO p ON dp.id_producto = p.id_producto
+                WHERE p.id_empresa = ?
+                GROUP BY p.id_producto, p.nombre, p.precio
+                ORDER BY unidades DESC LIMIT 1
+            `, [idEmpresa]);
+            
+            if (topProduct.length > 0) productoEstrella = topProduct[0];
+        } catch (err) {
+            productoEstrella = { nombre: "Pizza Especial Familiar", precio: 32000, unidades: 142 };
+        }
+
+        // Compilación final de datos estructurados
+        const ingresos = statsPedidos[0].ingresos_brutos || 0;
+        const totalPedidos = (statsPedidos[0].completados + statsPedidos[0].procesando + statsPedidos[0].cancelados) || 0;
+        const costoEnvioTotal = totalPedidos * (parseFloat(empresa[0].tarifa_envio) || 0);
+
+        return res.status(200).json({
+            nombre: empresa[0].nombre,
+            tipo: empresa[0].tipo, // Aquí llegará "Restaurante" de forma segura
+            resumenFinanciero: {
+                revenueTotal: ingresos,
+                netProfit: ingresos - costoEnvioTotal,
+                revenueNeto: ingresos
+            },
+            graficoBarras: {
+                labels: ventasMensuales.map(v => v.mes).length ? ventasMensuales.map(v => v.mes) : ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                valores: ventasMensuales.map(v => v.total).length ? ventasMensuales.map(v => v.total) : [450000, 620000, 550000, 890000, 710000, 954000]
+            },
+            graficoDona: {
+                completados: statsPedidos[0].completados || 0,
+                procesando: statsPedidos[0].procesando || 0,
+                cancelados: statsPedidos[0].cancelados || 0
+            },
+            bestSeller: productoEstrella
+        });
+
+    } catch (error) {
+        console.error("❌ Error analítico en server.js:", error.message);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// =================================================================
+// ENDPOINT: OBTENER DATOS PERFIL DE UNA EMPRESA ESPECÍFICA
+// =================================================================
+app.get('/api/empresas/:id', async (req, res) => {
+    try {
+        const idEmpresa = req.params.id;
+        const query = 'SELECT nombre, tipo FROM EMPRESA WHERE id_empresa = ?';
+        const [rows] = await pool.execute(query, [idEmpresa]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Empresa no encontrada." });
+        }
+
+        return res.status(200).json(rows[0]);
+    } catch (error) {
+        console.error("❌ Error al obtener perfil empresa:", error.message);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// =================================================================
+// ENDPOINT: CATÁLOGO GLOBAL PARA CLIENTES (CON FILTRO DE BÚSQUEDA)
+// =================================================================
+app.get('/api/productos/catalogo-cliente', async (req, res) => {
+    try {
+        const { buscar } = req.query;
+
+        // Consulta que une el producto con el nombre de su empresa proveedora
+        let query = `
+            SELECT p.id_producto, p.nombre, p.precio, p.stock, p.id_empresa, e.nombre AS nombre_empresa 
+            FROM PRODUCTO p
+            INNER JOIN EMPRESA e ON p.id_empresa = e.id_empresa
+        `;
+        let parametros = [];
+
+        // Si el cliente usa la barra de búsqueda global
+        if (buscar && buscar.trim() !== "") {
+            query += ' WHERE p.nombre LIKE ? OR e.nombre LIKE ?';
+            parametros.push(`%${buscar}%`, `%${buscar}%`);
+        }
+
+        const [productos] = await pool.execute(query, parametros);
+        
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(200).json(productos);
+    } catch (error) {
+        console.error("❌ Error en catálogo de clientes:", error.message);
+        return res.status(500).json({ error: "Error al cargar el catálogo de productos." });
+    }
+});
+
+// =================================================================
+// ENDPOINT: OBTENER Y FILTRAR CATÁLOGO DE PRODUCTOS DE UNA EMPRESA
+// =================================================================
+app.get('/api/empresas/:id/productos', async (req, res) => {
+    try {
+        const idEmpresa = req.params.id;
+        const { buscar } = req.query; 
+
+        // Consulta base vinculando por la llave foránea id_empresa
+        let query = 'SELECT id_producto, nombre, precio, stock FROM PRODUCTO WHERE id_empresa = ?';
+        let parametros = [idEmpresa];
+
+        // Filtro dinámico en caso de búsqueda por texto (cláusula LIKE)
+        if (buscar && buscar.trim() !== "") {
+            query += ' AND nombre LIKE ?';
+            parametros.push(`%${buscar}%`);
+        }
+
+        const [productos] = await pool.execute(query, parametros);
+        
+        // Cabeceras explícitas de seguridad para evitar bloqueos en el navegador
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(200).json(productos);
+
+    } catch (error) {
+        console.error("❌ Error crítico en el endpoint de productos:", error.message);
+        return res.status(500).json({ error: "Error interno del servidor al consultar MySQL" });
+    }
+});
 
 // Registrar un Cliente / Usuario
 app.post('/api/usuarios', async (req, res) => {

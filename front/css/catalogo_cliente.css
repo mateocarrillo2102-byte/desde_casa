@@ -1,0 +1,98 @@
+/* Ajustes de tipografía y suavizado basados en el artículo */
+body {
+    background-color: #0b0e1e; /* Un tono oscuro más profundo y premium */
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Contenedor del Buscador Estilo Píldora (Pill-shaped) */
+.search-wrapper {
+    flex-grow: 1;
+    max-width: 600px;
+    margin: 0 20px;
+}
+
+.input-search {
+    width: 100%;
+    padding: 14px 20px;
+    background: #181b36;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 30px; /* Redondeado completo estilo píldora */
+    color: white;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.input-search:focus {
+    border-color: #6c5dd3;
+    box-shadow: 0 0 10px rgba(108, 93, 211, 0.2);
+}
+
+/* Nueva Sección: Carrusel Horizontal de Categorías */
+.categories-timeline {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 10px 0 20px 0;
+    scrollbar-width: none; /* Ocultar barra en Firefox */
+}
+
+.categories-timeline::-webkit-scrollbar {
+    display: none; /* Ocultar barra en Chrome/Safari */
+}
+
+.category-pill {
+    background: #181b36;
+    color: #808191;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.category-pill.active, .category-pill:hover {
+    background: rgba(108, 93, 211, 0.15);
+    color: #b5aeff;
+    border-color: #6c5dd3;
+}
+
+/* Rediseño de Tarjetas estilo Uno Platform */
+.client-card {
+    background: #181b36;
+    border-radius: 24px; /* Bordes más suaves */
+    padding: 18px;
+    border: none;
+    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.client-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0px 12px 30px rgba(108, 93, 211, 0.15);
+}
+
+.product-price {
+    font-size: 20px;
+    color: #ffffff; /* Precio en blanco para mayor elegancia */
+    font-weight: 800;
+}
+
+/* Botón estilizado circular/pequeño para añadir */
+.btn-add-badge {
+    background: #6c5dd3;
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-add-badge:hover {
+    background: #5b4db8;
+}
