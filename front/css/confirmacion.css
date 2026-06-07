@@ -1,0 +1,121 @@
+/* =============================================
+   confirmacion.css — Página de pedido exitoso
+   ============================================= */
+
+:root {
+    --bg-global: #11142d;
+    --bg-card: #1f223f;
+    --primary-purple: #6c5dd3;
+    --text-dark: #ffffff;
+    --text-muted: #808191;
+    --green-success: #7cd38e;
+    --amber-warning: #ffbc75;
+    --border-color: #2a2d4a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-global);
+    color: var(--text-dark);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.tarjeta {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 40px 36px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    width: 100%;
+    max-width: 380px;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.icono-exito {
+    font-size: 56px;
+    margin-bottom: 16px;
+    display: block;
+    animation: pop 0.5s ease 0.2s both;
+}
+
+@keyframes pop {
+    0%   { transform: scale(0.5); opacity: 0; }
+    80%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.tarjeta h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--green-success);
+    margin-bottom: 8px;
+}
+
+.tarjeta p {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    font-size: 15px;
+}
+
+.total-display {
+    background: #2a2d4a;
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #b5aeff;
+    margin-bottom: 28px;
+    letter-spacing: 0.5px;
+}
+
+.acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn {
+    display: block;
+    width: 100%;
+    padding: 13px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn:hover  { opacity: 0.88; }
+.btn:active { transform: scale(0.98); }
+
+.btn-exito      { background-color: var(--green-success); color: #11142d; }
+.btn-alerta     { background-color: var(--amber-warning); color: #11142d; }
+.btn-secundario { background-color: #2a2d4a; color: var(--text-dark); }
+
+.estado-envio {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 20px;
+}
+
+#mensajeError {
+    color: #ff754c;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+}

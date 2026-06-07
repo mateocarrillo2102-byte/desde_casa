@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Pedidos — DomiClick</title>
+    <link rel="stylesheet" href="css/historial.css">
+</head>
+<body>
+
+    <div class="contenedor">
+
+        <div class="page-header">
+            <a href="panel-cliente.html" class="btn-volver">⬅ Volver</a>
+            <h2>📜 Historial de Pedidos</h2>
+        </div>
+
+        <div class="card-tabla">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID Pedido</th>
+                        <th>Fecha</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="listaHistorial">
+                    <!-- Las filas se generan con JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        // ─── Seguridad ────────────────────────────────────────────────────
+        const idUsuario = localStorage.getItem('id_usuario');
+        if (!idUsuario) {
+            alert('Debes iniciar sesión para ver tu historial.');
+            window.location.href = 'login.html';
+        }
+
+        // ─── Función para convertir estado en badge HTML ──────────────────
+        function badgeEstado(estado) {
+            const clases = {
+                'Pendiente' : 'badge-pendiente',
+                'Asignado'  : 'badge-asignado',
+                'En camino' : 'badge-camino',
+                'Entregado' : 'badge-entregado',
+                'Cancelado' : 'badge-cancelado'
+            };
+            const clase = clases[estado] || 'badge-pendiente';
+            return `<span class="badge ${clase}">${estado}</span>`;
+        }
+
+        // ─── Función para formatear la fecha ─────────────────────────────
+        function formatearFecha(fechaISO) {
+            if (!fechaISO) return '—';
+            const d = new Date(fechaISO);
+            return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        // ─── Skeleton loader mientras carga ──────────────────────────────
+        function mostrarSkeleton() {
+            const tabla = document.getElementById('listaHistorial');
+            let html = '';
+            for (let i = 0; i < 4; i++) {
+                html += `
+                    <tr class="skeleton-row">
+                        <td><div class="skeleton-bar" style="width:60px"></div></td>
+                        <td><div class="skeleton-bar" style="width:90px"></div></td>
+                        <td><div class="skeleton-bar" style="width:70px"></div></td>
+                        <td><div class="skeleton-bar" style="width:80px"></div></td>
+                    </tr>`;
+            }
+            tabla.innerHTML = html;
+        }
+
+        // ─── Cargar historial desde el backend ───────────────────────────
+        async function cargarHistorial() {
+            const tabla = document.getElementById('listaHistorial');
+            mostrarSkeleton();
+
+            try {
+                const res  = await fetch(`http://localhost:5000/api/pedidos?id_usuario=${idUsuario}`);
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'Error del servidor');
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    tabla.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="estado-vacio">
+                                <span>📦</span>
+                                Aún no tienes pedidos registrados.
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                tabla.innerHTML = data.map(p => `
+                    <tr>
+                        <td><strong>#${p.id_pedido}</strong></td>
+                        <td>${formatearFecha(p.fecha)}</td>
+                        <td>$${Number(p.total).toLocaleString('es-CO')}</td>
+                        <td>${badgeEstado(p.estado)}</td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error('Error al cargar historial:', err);
+                tabla.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="estado-vacio">
+                            <span>⚠️</span>
+                            No se pudo conectar con el servidor.
+                        </td>
+                    </tr>`;
+            }
+        }
+
+        cargarHistorial();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,117 @@
+/* =============================================
+   estado_pedido.css — Seguimiento del pedido
+   ============================================= */
+
+:root {
+    --bg-global: #11142d;
+    --bg-card: #1f223f;
+    --primary-purple: #6c5dd3;
+    --text-dark: #ffffff;
+    --text-muted: #808191;
+    --green-success: #7cd38e;
+    --amber-warning: #ffbc75;
+    --border-color: #2a2d4a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-global);
+    color: var(--text-dark);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.tarjeta {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 36px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.icono-moto {
+    font-size: 52px;
+    margin-bottom: 12px;
+    display: block;
+    animation: bounce 1.8s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-8px); }
+}
+
+.tarjeta h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.id-pedido {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+}
+
+/* ── Línea de pasos ─────────────────── */
+.pasos {
+    text-align: left;
+    background: #2a2d4a;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+}
+
+.paso {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 15px;
+    transition: color 0.3s;
+}
+
+.paso:last-child { border-bottom: none; }
+
+.paso.activo  { color: var(--green-success); font-weight: 600; }
+.paso.en-curso { color: var(--amber-warning); font-weight: 600; }
+
+.paso-icono { font-size: 20px; flex-shrink: 0; }
+
+/* ── Botón volver ───────────────────── */
+.btn-volver {
+    display: inline-block;
+    text-decoration: none;
+    color: #b5aeff;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+
+.btn-volver:hover { background: #2a2d4a; }
+
+/* ── Indicador de refresco ──────────── */
+.auto-refresh {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 18px;
+}

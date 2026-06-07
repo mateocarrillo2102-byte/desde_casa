@@ -58,9 +58,10 @@
                     alerta.innerHTML = `<strong>¡Acceso Concedido!</strong><br>Bienvenido, ${data.nombre} (${data.rol})`;
                     
                     // Guardar los datos de sesión en el navegador por seguridad
-                    localStorage.setItem('usuarioId', data.id);
-                    localStorage.setItem('usuarioRol', data.role || data.rol);
-                    localStorage.setItem('usuarioNombre', data.nombre);
+                    // Verifique que su Login guarde las variables con estos nombres exactos:
+                    localStorage.setItem('id_usuario', respuesta.id);
+                    localStorage.setItem('nombre_usuario', respuesta.nombre);
+                    localStorage.setItem('rol_usuario', respuesta.rol);
 
                     // Redirección inteligente según el rol que devolvió MySQL
                     setTimeout(() => {
@@ -84,7 +85,5 @@
             }
         });
     </script>
-    
-        <a style="background-image: url('./img/back.png'); display: block; height: 200px; margin-bottom: 20px;"></a>
 </body>
 </html>

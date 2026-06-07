@@ -1,0 +1,218 @@
+/* =============================================
+   panel_cliente.css — Panel principal del cliente
+   ============================================= */
+
+:root {
+    --bg-global: #11142d;
+    --bg-card: #1f223f;
+    --primary-purple: #6c5dd3;
+    --text-dark: #ffffff;
+    --text-muted: #808191;
+    --green-success: #7cd38e;
+    --amber-warning: #ffbc75;
+    --border-color: #2a2d4a;
+    --red-danger: #ff754c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-global);
+    color: var(--text-dark);
+    min-height: 100vh;
+    padding: 24px 20px;
+}
+
+/* ── Encabezado ─────────────────────── */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.page-header h2 { font-size: 22px; font-weight: 700; }
+
+.bienvenida {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.bienvenida span { color: #b5aeff; font-weight: 600; }
+
+/* ── Contenedor principal ────────────── */
+.contenedor { max-width: 900px; margin: 0 auto; }
+
+/* ── Secciones ──────────────────────── */
+.card-seccion {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.2);
+}
+
+.card-seccion h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-dark);
+}
+
+/* ── Buscador ───────────────────────── */
+.buscador-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: #2a2d4a;
+    color: var(--text-dark);
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+}
+
+.buscador-input:focus { border-color: var(--primary-purple); }
+
+/* ── Grilla de productos ─────────────── */
+.productos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.producto-card {
+    background: #2a2d4a;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.15s;
+}
+
+.producto-card:hover {
+    border-color: var(--primary-purple);
+    transform: translateY(-2px);
+}
+
+.producto-card h4 { font-size: 15px; margin-bottom: 6px; }
+.producto-card .precio { color: var(--green-success); font-weight: 700; margin-bottom: 12px; }
+.producto-card .empresa-tag { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+
+/* ── Carrito ────────────────────────── */
+.item-carrito {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+}
+
+.item-carrito:last-child { border-bottom: none; }
+
+.btn-quitar {
+    background: none;
+    border: none;
+    color: var(--red-danger);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.btn-quitar:hover { background: rgba(255,117,76,0.12); }
+
+.carrito-vacio {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 20px;
+    font-size: 14px;
+}
+
+.total-box {
+    background: #2a2d4a;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.total-box span { color: #b5aeff; font-size: 20px; }
+
+/* ── Select de método de pago ─────────── */
+.campo-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+select {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: #2a2d4a;
+    color: var(--text-dark);
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+select:focus { border-color: var(--primary-purple); }
+
+/* ── Botones ────────────────────────── */
+.btn {
+    display: block;
+    width: 100%;
+    padding: 13px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn:hover  { opacity: 0.88; }
+.btn:active { transform: scale(0.98); }
+
+.btn-exito      { background-color: var(--green-success); color: #11142d; }
+.btn-secundario { background-color: #2a2d4a; color: var(--text-dark); }
+
+/* ── Enlace historial ────────────────── */
+.link-historial {
+    display: block;
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    color: #b5aeff;
+    text-decoration: none;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    transition: color 0.2s;
+}
+
+.link-historial:hover { color: var(--primary-purple); }
+
+/* ── Mensajes inline ─────────────────── */
+.msg-error   { color: var(--red-danger);    font-size: 13px; margin-top: 8px; }
+.msg-success { color: var(--green-success); font-size: 13px; margin-top: 8px; }

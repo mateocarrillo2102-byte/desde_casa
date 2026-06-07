@@ -1,0 +1,146 @@
+/* =============================================
+   historial.css — Historial de pedidos
+   ============================================= */
+
+:root {
+    --bg-global: #11142d;
+    --bg-card: #1f223f;
+    --primary-purple: #6c5dd3;
+    --text-dark: #ffffff;
+    --text-muted: #808191;
+    --green-success: #7cd38e;
+    --red-danger: #ff754c;
+    --amber-warning: #ffbc75;
+    --border-color: #2a2d4a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-global);
+    color: var(--text-dark);
+    min-height: 100vh;
+    padding: 28px 20px;
+}
+
+.contenedor {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* ── Encabezado ─────────────────────── */
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.btn-volver {
+    background: #2a2d4a;
+    border: none;
+    color: var(--text-dark);
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.btn-volver:hover { background: #363a5e; }
+
+.page-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+/* ── Tarjeta contenedora ─────────────── */
+.card-tabla {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+/* ── Tabla ───────────────────────────── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead tr {
+    background: #2a2d4a;
+}
+
+th {
+    padding: 16px 20px;
+    text-align: left;
+    color: #b5aeff;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    color: var(--text-dark);
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: rgba(108, 93, 211, 0.06); }
+
+/* ── Badges de estado ────────────────── */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.badge-pendiente  { background: rgba(255, 188, 117, 0.15); color: var(--amber-warning); }
+.badge-entregado  { background: rgba(124, 211, 142, 0.15); color: var(--green-success); }
+.badge-camino     { background: rgba(108, 93, 211, 0.15);  color: #b5aeff; }
+.badge-cancelado  { background: rgba(255, 117, 76, 0.15);  color: var(--red-danger); }
+.badge-asignado   { background: rgba(108, 93, 211, 0.15);  color: #b5aeff; }
+
+/* ── Estado vacío / error ─────────────── */
+.estado-vacio {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+    font-size: 15px;
+}
+
+.estado-vacio span { font-size: 40px; display: block; margin-bottom: 12px; }
+
+/* ── Skeleton loader ─────────────────── */
+.skeleton-row td {
+    padding: 16px 20px;
+}
+
+.skeleton-bar {
+    height: 14px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #2a2d4a 25%, #363a5e 50%, #2a2d4a 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

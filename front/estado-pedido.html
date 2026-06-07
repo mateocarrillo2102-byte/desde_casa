@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estado del Pedido — DomiClick</title>
+    <link rel="stylesheet" href="css/estado_pedido.css">
+</head>
+<body>
+
+    <div class="tarjeta">
+        <span class="icono-moto">🛵</span>
+        <h1>Estado del Pedido</h1>
+        <p class="id-pedido" id="idPedidoDisplay">Pedido #—</p>
+
+        <div class="pasos" id="contenedorPasos">
+            <!-- Los pasos se pintan dinámicamente según el estado del backend -->
+            <div class="paso" id="paso-recibido">
+                <span class="paso-icono">📋</span> Pedido recibido
+            </div>
+            <div class="paso" id="paso-preparacion">
+                <span class="paso-icono">🍳</span> En preparación
+            </div>
+            <div class="paso" id="paso-camino">
+                <span class="paso-icono">🛵</span> En camino
+            </div>
+            <div class="paso" id="paso-entregado">
+                <span class="paso-icono">✅</span> Entregado
+            </div>
+        </div>
+
+        <a href="confirmacion.html" class="btn-volver">← Volver</a>
+        <p class="auto-refresh">Se actualiza automáticamente cada 10 segundos</p>
+    </div>
+
+    <script>
+        // ─── Seguridad ────────────────────────────────────────────────────
+        const idUsuario = localStorage.getItem('id_usuario');
+        if (!idUsuario) {
+            alert('Debes iniciar sesión.');
+            window.location.href = 'login.html';
+        }
+
+        // ─── Mapa de estados → pasos activos ─────────────────────────────
+        // Los estados vienen del campo `estado` de la tabla PEDIDO
+        const mapaEstados = {
+            'Pendiente'  : ['paso-recibido'],
+            'Asignado'   : ['paso-recibido', 'paso-preparacion'],
+            'En camino'  : ['paso-recibido', 'paso-preparacion', 'paso-camino'],
+            'Entregado'  : ['paso-recibido', 'paso-preparacion', 'paso-camino', 'paso-entregado'],
+            'Cancelado'  : []
+        };
+
+        function pintarEstado(estado) {
+            // Limpiar clases previas
+            document.querySelectorAll('.paso').forEach(el => {
+                el.classList.remove('activo', 'en-curso');
+            });
+
+            const pasosActivos = mapaEstados[estado] || [];
+
+            pasosActivos.forEach((idPaso, index) => {
+                const el = document.getElementById(idPaso);
+                if (!el) return;
+                // El último paso activo aparece como "en curso", los anteriores como completados
+                if (index === pasosActivos.length - 1 && estado !== 'Entregado') {
+                    el.classList.add('en-curso');
+                } else {
+                    el.classList.add('activo');
+                }
+            });
+        }
+
+        // ─── Consultar el estado real al backend ─────────────────────────
+        async function consultarEstado() {
+            const idPedido = localStorage.getItem('ultimo_id_pedido');
+            if (!idPedido) return; // Si no hay pedido aún, no hacer nada
+
+            document.getElementById('idPedidoDisplay').innerText = 'Pedido #' + idPedido;
+
+            try {
+                const res  = await fetch(`http://localhost:5000/api/pedidos/${idPedido}`);
+                const data = await res.json();
+
+                if (res.ok && data.estado) {
+                    pintarEstado(data.estado);
+                }
+            } catch (err) {
+                console.error('No se pudo obtener el estado del pedido:', err);
+            }
+        }
+
+        // Consulta inicial y refresco automático cada 10 segundos
+        consultarEstado();
+        setInterval(consultarEstado, 10000);
+    </script>
+
+</body>
+</html>
