@@ -19,21 +19,16 @@
             </div>
             <button type="submit" class="btn">Ingresar al Sistema</button>
         </form>
-        <div id="alertaLogin" class="json-alerta">Esperando credenciales...</div>
+        <div id="alertaLogin" class="json-alerta" style="margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center; background: #2a2d4a; color: #b5aeff;">Esperando credenciales...</div>
     </div>
 
     <script>
         document.getElementById('formLogin').addEventListener('submit', async (e) => {
             e.preventDefault(); // Evitar que la página se recargue
 
-            // Reutilizamos el cuadro gris o el elemento de alertas que tenga en su HTML
-            // (Asegúrese de que el ID coincida con su contenedor de alertas, ej: 'alertaLogin')
-            const alerta = document.getElementById('alertaLogin') || document.createElement('div');
-            alerta.id = 'alertaLogin';
+            const alerta = document.getElementById('alertaLogin');
+            alerta.style.color = "#b5aeff";
             alerta.innerText = "Verificando credenciales en el sistema...";
-            if (!document.getElementById('alertaLogin')) {
-                document.getElementById('formLogin').appendChild(alerta);
-            }
 
             const payload = {
                 email: document.getElementById('logEmail').value,
@@ -41,47 +36,48 @@
             };
 
             try {
-                // Petición formal al endpoint virtual unificado de login
+                // Petición formal al endpoint unificado de login en el puerto 5000
                 const respuesta = await fetch('http://localhost:5000/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                // Leemos como texto primero para blindar el flujo
+                // Leemos como texto primero para control de errores de red
                 const textoPlano = await respuesta.text();
-                console.log("Respuesta del servidor:", textoPlano);
+                console.log("Respuesta cruda del servidor:", textoPlano);
                 
                 const data = JSON.parse(textoPlano);
 
                 if (respuesta.ok) {
-                    alerta.innerHTML = `<strong>¡Acceso Concedido!</strong><br>Bienvenido, ${data.nombre} (${data.rol})`;
+                    alerta.style.color = "#28a745";
+                    alerta.innerText = "¡Autenticación exitosa! Redirigiendo...";
+
+                    // CORRECCIÓN CRÍTICA: Se unifica el uso de 'data' en lugar de 'datos'
+                    localStorage.clear(); // Limpia cualquier rastro corrupto anterior
                     
-                    // Guardar los datos de sesión en el navegador por seguridad
-                    // Verifique que su Login guarde las variables con estos nombres exactos:
-                    localStorage.setItem('id_usuario', respuesta.id);
-                    localStorage.setItem('nombre_usuario', respuesta.nombre);
-                    localStorage.setItem('rol_usuario', respuesta.rol);
+                    localStorage.setItem('id_usuario', data.id);
+                    localStorage.setItem('nombre_usuario', data.nombre);
+                    localStorage.setItem('rol_usuario', data.rol);
+                    
+                    console.log("Sesión iniciada correctamente para: ", data.nombre);
 
-                    // Redirección inteligente según el rol que devolvió MySQL
-                    setTimeout(() => {
-                        if (data.rol === 'Empresa') {
-                            window.location.href = 'login_empresa.html'; // O el nombre de su panel corporativo
-                        } else if (data.rol === 'Domiciliario') {
-                            window.location.href = 'panel-domiciliario.html';
-                        } else {
-                            window.location.href = 'panel-cliente.html'; // Clientes van al catálogo de inicio
-                        }
-                    }, 1500);
-
+                    // Redirección condicionada según el rol que devuelve el servidor
+                    if (data.rol === 'Empresa') {
+                        window.location.href = 'login_empresa.html';
+                    } else {
+                        window.location.href = 'login_cliente.html'; 
+                    }
+                    
                 } else {
-                    // Si las credenciales no existen o la contraseña está mal escrita
-                    alerta.innerText = "Error de acceso: " + (data.error || "Credenciales incorrectas.");
+                    alerta.style.color = "#ff754c";
+                    alerta.innerText = data.error || "Credenciales incorrectas";
                 }
 
             } catch (error) {
+                alerta.style.color = "#ff754c";
                 alerta.innerText = "Error crítico: El servidor de Node.js no responde.";
-                console.error("Detalle del error:", error);
+                console.error("Detalle del error de comunicación:", error);
             }
         });
     </script>

@@ -34,65 +34,69 @@
     </div>
 
     <script>
-        // ─── Seguridad ────────────────────────────────────────────────────
-        const idUsuario = localStorage.getItem('id_usuario');
-        if (!idUsuario) {
-            alert('Debes iniciar sesión.');
-            window.location.href = 'login.html';
+        // ─── Configuración del mapeo secuencial de estados ───────────────────
+const mapaEstados = {
+    'Pendiente':   ['paso-recibido'],
+    'Preparacion': ['paso-recibido', 'paso-preparacion'],
+    'En camino':   ['paso-recibido', 'paso-preparacion', 'paso-camino'],
+    'Entregado':   ['paso-recibido', 'paso-preparacion', 'paso-camino', 'paso-entregado']
+};
+
+function pintarEstado(estado) {
+    console.log("Pintando estado en interfaz:", estado);
+    
+    // Limpiar todas las clases de estilo previas en los elementos
+    document.querySelectorAll('.paso').forEach(paso => {
+        paso.classList.remove('activo', 'en-curso');
+    });
+
+    const pasosActivos = mapaEstados[estado] || [];
+
+    pasosActivos.forEach((idPaso, index) => {
+        const el = document.getElementById(idPaso);
+        if (!el) return;
+        
+        // El último paso de la cadena se marca en curso, los anteriores completados
+        if (index === pasosActivos.length - 1 && estado !== 'Entregado') {
+            el.classList.add('en-curso');
+        } else {
+            el.classList.add('activo');
         }
+    });
+}
 
-        // ─── Mapa de estados → pasos activos ─────────────────────────────
-        // Los estados vienen del campo `estado` de la tabla PEDIDO
-        const mapaEstados = {
-            'Pendiente'  : ['paso-recibido'],
-            'Asignado'   : ['paso-recibido', 'paso-preparacion'],
-            'En camino'  : ['paso-recibido', 'paso-preparacion', 'paso-camino'],
-            'Entregado'  : ['paso-recibido', 'paso-preparacion', 'paso-camino', 'paso-entregado'],
-            'Cancelado'  : []
-        };
+// ─── Consultar el estado real al backend ─────────────────────────
+async function consultarEstado() {
+    const idPedido = localStorage.getItem('ultimo_id_pedido');
+    console.log("Consultando ID de pedido actual de LocalStorage:", idPedido);
 
-        function pintarEstado(estado) {
-            // Limpiar clases previas
-            document.querySelectorAll('.paso').forEach(el => {
-                el.classList.remove('activo', 'en-curso');
-            });
+    if (!idPedido) {
+        document.getElementById('idPedidoDisplay').innerText = 'Sin pedidos activos';
+        return; 
+    }
 
-            const pasosActivos = mapaEstados[estado] || [];
+    document.getElementById('idPedidoDisplay').innerText = 'Pedido #' + idPedido;
 
-            pasosActivos.forEach((idPaso, index) => {
-                const el = document.getElementById(idPaso);
-                if (!el) return;
-                // El último paso activo aparece como "en curso", los anteriores como completados
-                if (index === pasosActivos.length - 1 && estado !== 'Entregado') {
-                    el.classList.add('en-curso');
-                } else {
-                    el.classList.add('activo');
-                }
-            });
+    try {
+        const res  = await fetch(`http://localhost:5000/api/pedidos/${idPedido}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        
+        const data = await res.json();
+        console.log("Datos recibidos del servidor para el estado:", data);
+
+        if (data && data.estado) {
+            pintarEstado(data.estado);
         }
+    } catch (err) {
+        console.error('No se pudo obtener el estado del pedido desde el backend:', err);
+    }
+}
 
-        // ─── Consultar el estado real al backend ─────────────────────────
-        async function consultarEstado() {
-            const idPedido = localStorage.getItem('ultimo_id_pedido');
-            if (!idPedido) return; // Si no hay pedido aún, no hacer nada
-
-            document.getElementById('idPedidoDisplay').innerText = 'Pedido #' + idPedido;
-
-            try {
-                const res  = await fetch(`http://localhost:5000/api/pedidos/${idPedido}`);
-                const data = await res.json();
-
-                if (res.ok && data.estado) {
-                    pintarEstado(data.estado);
-                }
-            } catch (err) {
-                console.error('No se pudo obtener el estado del pedido:', err);
-            }
-        }
-
-        // Consulta inicial y refresco automático cada 10 segundos
-        consultarEstado();
-        setInterval(consultarEstado, 10000);
+// Ejecución inicial automática y refresco cíclico cada 10 segundos
+document.addEventListener("DOMContentLoaded", () => {
+    consultarEstado();
+    setInterval(consultarEstado, 10000);
+});
     </script>
 
 </body>

@@ -34,11 +34,10 @@
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
                 <div>
                     <div class="card" style="padding: 20px;">
-                        <h3 class="card-title" style="margin-bottom: 15px;">🏪 Buscar Productos</h3>
-                        <input type="text" id="buscador" class="input-dark" placeholder="🔍 Escribe para buscar productos..." onkeyup="buscarProductos()">
+                        <h3 class="card-title" style="margin-bottom: 15px;">🏪 Catálogo de Productos</h3>
                         
                         <div id="catalogoProductos" class="productos-grid">
-                            <p style="color: var(--text-muted); padding: 10px;">Comience a escribir para desplegar el catálogo de DomiClick...</p>
+                            <p style="color: var(--text-muted); padding: 10px;">Sincronizando productos con el servidor...</p>
                         </div>
                     </div>
                 </div>
@@ -109,150 +108,163 @@
     <script>
         let carrito = [];
 
-window.onload = function() {
-    // 1. CONTROL DE SESIÓN ESTRICTO (Sin nombres quemados a mano)
+        window.onload = function() {
+    // 1. CONTROL DE SESIÓN ESTRICTO
     const idUsuario = localStorage.getItem('id_usuario');
     const nombreUsuario = localStorage.getItem('nombre_usuario');
     const rolUsuario = localStorage.getItem('rol_usuario') || 'Cliente Consumidor';
 
-    // Si el usuario no ha pasado por el login real, lo redirigimos para limpiar el caché
     if (!idUsuario || !nombreUsuario) {
         alert("Sesión no detectada o expirada. Por favor, inicie sesión formalmente.");
         window.location.href = 'login.html'; 
         return;
     }
 
-    // 2. INYECCIÓN DE IDENTIDAD REAL DESDE EL LOGIN
+    // 2. INYECCIÓN DE IDENTIDAD DINÁMICA
     document.getElementById('nombreCliente').innerText = nombreUsuario;
     document.getElementById('perfNombre').innerText = nombreUsuario;
     
-    const lblRol = document.querySelector('#view-perfil span');
-    if (lblRol) lblRol.innerText = rolUsuario;
+    const contenedorPerfil = document.getElementById('view-perfil');
+    if (contenedorPerfil) {
+        const spans = contenedorPerfil.getElementsByTagName('span');
+        if (spans.length >= 2) spans[1].innerText = rolUsuario;
+    }
 
-    // 3. INVOCACIÓN DE DATOS REALES
+    // 3. CARGA DE CATÁLOGO INICIAL
+    cargarProductosDesdeBD();
     cargarHistorial();
+
+    // ─── OPTIMIZACIÓN PUNTO 4: CAPTURAR REDIRECCIÓN DESDE CONFIRMACIÓN ───
+    const urlParams = new URLSearchParams(window.location.search);
+    const vistaSolicitada = urlParams.get('vista');
+    if (vistaSolicitada === 'pedidos') {
+        // Buscamos el botón de la barra lateral de pedidos para activarlo visualmente
+        const itemMenuPedidos = document.querySelectorAll('.nav-menu .nav-item')[1]; 
+        cambiarSeccion('pedidos', itemMenuPedidos);
+    }
 };
 
-// Controlador de Intercambio de Pantallas (SPA UX)
-function cambiarSeccion(seccionId, elementoMenu) {
-    document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    
-    document.getElementById(`view-${seccionId}`).classList.add('active');
-    elementoMenu.classList.add('active');
+        // ✔ SOLUCIÓN REINCORPORADA: Controlador de Intercambio de Pantallas (SPA UX)
+        function cambiarSeccion(seccionId, elementoMenu) {
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            document.getElementById(`view-${seccionId}`).classList.add('active');
+            elementoMenu.classList.add('active');
 
-    if (seccionId === 'pedidos') {
-        cargarHistorial();
-    }
-}
-
-// --- BÚSQUEDA DINÁMICA CONECTADA AL CATALOGO-CLIENTE ---
-async function buscarProductos() {
-    const query = document.getElementById('buscador').value;
-    const contenedor = document.getElementById('catalogoProductos');
-    
-    if (query.trim().length < 1) { 
-        contenedor.innerHTML = '<p style="color: var(--text-muted); padding: 10px;">Comience a escribir para desplegar el catálogo de DomiClick...</p>'; 
-        return; 
-    }
-    
-    try {
-        const respuesta = await fetch(`http://localhost:5000/api/productos/catalogo-cliente?buscar=${encodeURIComponent(query)}`);
-        if (!respuesta.ok) throw new Error('Error de comunicación');
-        const productos = await respuesta.json();
-        
-        contenedor.innerHTML = ''; 
-        if (productos.length === 0) { 
-            contenedor.innerHTML = '<p style="color: var(--text-muted); padding:10px;">No se encontraron productos.</p>'; 
-            return; 
-        }
-        
-        productos.forEach(prod => {
-            contenedor.innerHTML += `
-                <div class="producto-card">
-                    <div>
-                        <span style="font-size:11px; background:#2a2d4a; color:#b5aeff; padding:4px 8px; border-radius:6px;">🏪 ${prod.nombre_empresa}</span>
-                        <h4 style="margin:10px 0 5px 0;">${prod.nombre}</h4>
-                        <p style="color: #b5aeff; font-weight:700; margin:0 0 15px 0;">$${parseFloat(prod.precio).toLocaleString('es-CO')}</p>
-                    </div>
-                    <button class="btn-action" style="width:100%; font-size:12px;" onclick="agregarAlCarrito(${prod.id_producto}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio})">Agregar ➕</button>
-                </div>
-            `;
-        });
-    } catch (err) {
-        console.error("Error al buscar:", err);
-        contenedor.innerHTML = '<p style="color:var(--red-danger); padding:10px;">Error al sincronizar con el backend.</p>';
-    }
-}
-
-// --- GESTIÓN DINÁMICA DEL CARRITO ---
-function agregarAlCarrito(id, nombre, precio) {
-    carrito.push({ id_producto: id, nombre, precio });
-    
-    const listaCarrito = document.getElementById('itemsCarrito');
-    if (carrito.length === 1) listaCarrito.innerHTML = '';
-    
-    listaCarrito.innerHTML += `
-        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
-            <span>${nombre}</span>
-            <span style="color:#b5aeff; font-weight:bold;">$${parseFloat(precio).toLocaleString('es-CO')}</span>
-        </div>
-    `;
-    
-    const total = carrito.reduce((sum, item) => sum + parseFloat(item.precio), 0);
-    document.getElementById('totalPedido').innerText = `$${total.toLocaleString('es-CO')}`;
-}
-
-// --- PERSISTENCIA LOCAL Y CHECKOUT ---
-function realizarPedido() {
-    if (carrito.length === 0) return alert("El carrito está vacío");
-    
-    localStorage.setItem('pedidoFinal', JSON.stringify(carrito));
-    localStorage.setItem('totalFinal', document.getElementById('totalPedido').innerText);
-    localStorage.setItem('metodoPagoFinal', document.getElementById('metodoPago').value);
-    
-    window.location.href = 'confirmacion.html';
-}
-
-// --- CARGA SINCRO DE HISTORIAL DESDE LA BD ---
-async function cargarHistorial() {
-    const idUsuario = localStorage.getItem('id_usuario');
-    const listaHistorial = document.getElementById('listaHistorial');
-    
-    if (!idUsuario) return;
-
-    try {
-        const res = await fetch(`http://localhost:5000/api/pedidos/usuario/${idUsuario}`);
-        if (!res.ok) throw new Error("Fallo en la red");
-        const pedidos = await res.json();
-        
-        listaHistorial.innerHTML = '';
-        if (pedidos.length === 0) {
-            listaHistorial.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:20px;">No registras órdenes de compra aún.</td></tr>';
-            return;
+            if (seccionId === 'pedidos') {
+                cargarHistorial();
+            }
         }
 
-        pedidos.forEach(p => {
-            listaHistorial.innerHTML += `
-                <div style="display:table-row;">
-                    <tr style="border-bottom: 1px solid var(--border-color);">
-                        <td style="font-weight:bold; color:#b5aeff;">#${p.id_pedido}</td>
-                        <td>$${parseFloat(p.total).toLocaleString('es-CO')}</td>
-                        <td><span class="badge-estado">${p.estado}</span></td>
-                    </tr>
+        // --- CARGA DINÁMICA DE INVENTARIO DESDE EL BACKEND ---
+        async function cargarProductosDesdeBD() {
+            const cat = document.getElementById('catalogoProductos');
+            try {
+                const respuesta = await fetch('http://localhost:5000/api/productos/catalogo-cliente');
+                if (!respuesta.ok) throw new Error('Error al traer catálogo');
+                const productos = await respuesta.json();
+                
+                cat.innerHTML = '';
+                if (productos.length === 0) {
+                    cat.innerHTML = '<p style="color:var(--text-muted); padding:10px;">No hay productos en el inventario actual.</p>';
+                    return;
+                }
+
+                productos.forEach(prod => {
+                    cat.innerHTML += `
+                        <div class="producto-card">
+                            <div>
+                                <span style="font-size:11px; background:#2a2d4a; color:#b5aeff; padding:4px 8px; border-radius:6px;">🏪 ${prod.nombre_empresa}</span>
+                                <h4 style="margin:10px 0 5px 0; color:white;">${prod.nombre}</h4>
+                                <p style="color: #b5aeff; font-weight:700; margin:0 0 15px 0;">$${parseFloat(prod.precio).toLocaleString('es-CO')}</p>
+                            </div>
+                            <button class="btn-action" style="width:100%; font-size:12px;" onclick="agregarAlCarrito(${prod.id_producto}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio}, ${prod.id_empresa})">Agregar ➕</button>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                cat.innerHTML = '<p style="color:var(--red-danger); padding:10px;">Error al sincronizar con el backend.</p>';
+            }
+        }
+
+        // --- GESTIÓN DINÁMICA DEL CARRITO ---
+        function agregarAlCarrito(id, nombre, precio, idEmpresa) {
+            if (carrito.length === 0) {
+                localStorage.setItem('id_empresa', idEmpresa);
+            } else {
+                const empresaActual = localStorage.getItem('id_empresa');
+                if (String(idEmpresa) !== String(empresaActual)) {
+                    alert("Solo puedes agregar productos de la misma empresa a tu orden.");
+                    return;
+                }
+            }
+
+            carrito.push({ id_producto: id, nombre, precio, cantidad: 1 });
+            
+            const listaCarrito = document.getElementById('itemsCarrito');
+            if (carrito.length === 1) listaCarrito.innerHTML = '';
+            
+            listaCarrito.innerHTML += `
+                <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); color:white;">
+                    <span>${nombre}</span>
+                    <span style="color:#b5aeff; font-weight:bold;">$${parseFloat(precio).toLocaleString('es-CO')}</span>
                 </div>
             `;
-        });
-    } catch (err) {
-        console.error("Error al cargar historial:", err);
-        listaHistorial.innerHTML = '<tr><td colspan="3" style="color:var(--red-danger); text-align:center; padding:14px;">Error al conectar con el servidor de datos.</td></tr>';
-    }
-}
+            
+            const total = carrito.reduce((sum, item) => sum + parseFloat(item.precio), 0);
+            document.getElementById('totalPedido').innerText = `$${total.toLocaleString('es-CO')}`;
+            localStorage.setItem('totalFinal', `$${total.toLocaleString('es-CO')}`);
+        }
 
-function logout() {
-    localStorage.clear();
-    window.location.href = 'login.html';
-}
+        // ✔ SOLUCIÓN REINCORPORADA: Procesar Pago alineado con confirmacion.html
+        function realizarPedido() {
+            if (carrito.length === 0) return alert("El carrito está vacío");
+            
+            localStorage.setItem('pedidoFinal', JSON.stringify(carrito));
+            localStorage.setItem('metodoPagoFinal', document.getElementById('metodoPago').value);
+            
+            window.location.href = 'confirmacion.html';
+        }
+
+        // --- HISTORIAL DESDE LA BASE DE DATOS ---
+        async function cargarHistorial() {
+            const idUsuario = localStorage.getItem('id_usuario');
+            const listaHistorial = document.getElementById('listaHistorial');
+            
+            if (!idUsuario) return;
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/pedidos/usuario/${idUsuario}`);
+                if (!res.ok) throw new Error("Fallo en la red");
+                const pedidos = await res.json();
+                
+                listaHistorial.innerHTML = '';
+                if (pedidos.length === 0) {
+                    listaHistorial.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:20px;">No registras órdenes de compra aún.</td></tr>';
+                    return;
+                }
+
+                pedidos.forEach(p => {
+                    listaHistorial.innerHTML += `
+                        <tr>
+                            <td style="font-weight:bold; color:#b5aeff;">#${p.id_pedido}</td>
+                            <td>$${parseFloat(p.total).toLocaleString('es-CO')}</td>
+                            <td><span class="badge-estado">${p.estado}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Error al cargar historial:", err);
+                listaHistorial.innerHTML = '<tr><td colspan="3" style="color:var(--red-danger); text-align:center; padding:14px;">Error al conectar con el servidor de datos.</td></tr>';
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
     </script>
 </body>
 </html>

@@ -1,62 +1,102 @@
 import sys
 import json
+import io
+import traceback
+from datetime import datetime
 
-def asignar_domiciliario(datos):
-    """Lógica para asignar de forma inteligente al repartidor idóneo"""
-    id_pedido = datos.get("id_pedido")
-    domiciliarios = datos.get("domiciliarios", [])
-    
-    if not domiciliarios:
-        return {"status": "error", "mensaje": "No hay repartidores disponibles en Maicao."}
-    
-    # Algoritmo: Selecciona al repartidor disponible (por ejemplo, el primero de la lista)
-    elegido = domiciliarios[0]
-    
-    return {
-        "status": "exitoso",
-        "accion": "asignar",
-        "id_pedido": id_pedido,
-        "id_domiciliario": elegido["id_domiciliario"],
-        "nombre": elegido["nombre"]
-    }
+# 🛡️ BLINDAJE DE CODIFICACIÓN: Forzar UTF-8 para evitar colapso en Windows
+# al procesar palabras como "Establecimiento", tildes o caracteres especiales.
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 
-def generar_reporte_ventas(datos):
-    """Lógica para procesar estadísticas de ventas de una empresa"""
-    id_empresa = datos.get("id_empresa")
-    historial_pedidos = datos.get("historial", [])
-    
-    total_ingresos = 0
-    pedidos_completados = 0
-    
-    for pedido in historial_pedidos:
-        if pedido["estado"] == "Entregado":
-            total_ingresos += float(pedido["total"])
-            pedidos_completados += 1
-            
+def procesar_analitica_dashboard(datos):
+    nombre = datos.get("nombre_empresa", "Establecimiento")
+    tipo = datos.get("tipo_empresa", "Comercio")
+    pedidos = datos.get("pedidos", [])
+    detalles_productos = datos.get("detalles_productos", [])
+
+    completados = 0
+    procesando = 0
+    cancelados = 0
+    ingresos_brutos = 0.0
+    ventas_por_mes = {}
+
+    for p in pedidos:
+        estado = p.get("estado")
+        total_pedido = float(p.get("total") or 0.0)
+        
+        if estado == 'Entregado':
+            completados += 1
+            ingresos_brutos += total_pedido
+            fecha_str = p.get("fecha")
+            if fecha_str:
+                try:
+                    fecha_limpia = str(fecha_str).split("T")[0]
+                    dt = datetime.strptime(fecha_limpia, "%Y-%m-%d")
+                    mes_nombre = dt.strftime("%b") 
+                    ventas_por_mes[mes_nombre] = ventas_por_mes.get(mes_nombre, 0.0) + total_pedido
+                except Exception:
+                    pass
+        elif estado in ['Pendiente', 'En camino', 'Asignado', 'Preparacion']:
+            procesando += 1
+        elif estado == 'Cancelado':
+            cancelados += 1
+
+    labels_meses = list(ventas_por_mes.keys())
+    valores_meses = list(ventas_por_mes.values())
+
+    if not labels_meses:
+        labels_meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun']
+        valores_meses = [0, 0, 0, 0, 0, 0]
+
+    conteo_productos = {}
+    for dp in detalles_productos:
+        prod_nombre = dp.get("nombre")
+        prod_precio = float(dp.get("precio") or 0.0)
+        cantidad = int(dp.get("cantidad") or 0)
+
+        if prod_nombre not in conteo_productos:
+            conteo_productos[prod_nombre] = {"unidades": 0, "precio": prod_precio}
+        conteo_productos[prod_nombre]["unidades"] += cantidad
+
+    best_seller_final = {"nombre": "Ninguno", "precio": 0, "unidades": 0}
+    if conteo_productos:
+        producto_max = max(conteo_productos, key=lambda k: conteo_productos[k]["unidades"])
+        best_seller_final = {
+            "nombre": producto_max,
+            "precio": conteo_productos[producto_max]["precio"],
+            "unidades": conteo_productos[producto_max]["unidades"]
+        }
+
     return {
-        "status": "exitoso",
-        "accion": "reporte",
-        "id_empresa": id_empresa,
-        "total_ingresos": total_ingresos,
-        "pedidos_entregados": pedidos_completados,
-        "rendimiento": "Alto" if pedidos_completados > 5 else "Estable"
+        "nombre": nombre,
+        "tipo": tipo,
+        "resumenFinanciero": { "revenueTotal": ingresos_brutos },
+        "graficoBarras": { "labels": labels_meses, "valores": valores_meses },
+        "graficoDona": { "completados": completados, "procesando": procesando, "cancelados": cancelados },
+        "bestSeller": best_seller_final
     }
 
 if __name__ == "__main__":
-    # Leer el JSON enviado desde Node.js
-    input_data = sys.stdin.read()
-    if input_data:
-        peticion = json.loads(input_data)
-        tipo_tarea = peticion.get("tarea")
-        datos_tarea = peticion.get("datos")
-        
-        # Evaluar qué tarea ejecutar
-        if tipo_tarea == "asignar_repartidor":
-            resultado = asignar_domiciliario(datos_tarea)
-        elif tipo_tarea == "reporte_ventas":
-            resultado = generar_reporte_ventas(datos_tarea)
-        else:
-            resultado = {"status": "error", "mensaje": "Tarea no reconocida por el módulo de Python."}
-            
-        # Devolver el resultado a Node.js en formato JSON
-        print(json.dumps(resultado))
+    try:
+        input_data = sys.stdin.read()
+        if input_data and input_data.strip():
+            paquete = json.loads(input_data)
+            tarea = paquete.get("tarea")
+            datos = paquete.get("datos")
+
+            if tarea == "analitica_avanzada_dashboard":
+                resultado = procesar_analitica_dashboard(datos)
+                # La única salida limpia permitida
+                print(json.dumps(resultado))
+                
+    except Exception as e:
+        # 🛡️ CAPTURA INTELIGENTE: Empaquetamos el error como JSON para que Node
+        # lo procese sin provocar un "SyntaxError".
+        error_dict = {
+            "error_python": True,
+            "mensaje": str(e),
+            "detalle": traceback.format_exc()
+        }
+        print(json.dumps(error_dict))
+        sys.exit(1)

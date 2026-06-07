@@ -16,9 +16,11 @@
         <div class="total-display" id="totalDisplay">Total: $0</div>
 
         <div class="acciones">
-            <a href="panel-cliente.html" class="btn btn-exito">🛒 Hacer otro pedido</a>
+            <a href="login_cliente.html" class="btn btn-exito">🛒 Hacer otro pedido</a>
+            
             <a href="estado-pedido.html" class="btn btn-alerta">🛵 Ver estado del pedido</a>
-            <a href="historial.html"     class="btn btn-secundario">📜 Ver historial de pedidos</a>
+            
+            <a href="login_cliente.html?vista=pedidos" class="btn btn-secundario">📜 Ver historial de pedidos</a>
         </div>
 
         <p class="estado-envio">Recibirás tu pedido en la dirección registrada.</p>
@@ -26,77 +28,85 @@
     </div>
 
     <script>
-        // ─── Seguridad: redirigir si no hay sesión ───────────────────────
-        const idUsuario = localStorage.getItem('id_usuario');
-        if (!idUsuario) {
-            alert('Debes iniciar sesión para continuar.');
-            window.location.href = 'login.html';
+    // ─── SEGURIDAD: CONTROL DE SESIÓN ───────────────────────
+    const idUsuario = localStorage.getItem('id_usuario');
+    if (!idUsuario) {
+        alert('Debes iniciar sesión para continuar.');
+        window.location.href = 'login.html';
+    }
+
+    async function enviarPedido() {
+        const productos   = JSON.parse(localStorage.getItem('pedidoFinal') || '[]');
+        const idEmpresa   = localStorage.getItem('id_empresa');
+        const metodoPago  = localStorage.getItem('metodoPagoFinal') || 'Efectivo';
+        const msgError    = document.getElementById('mensajeError');
+
+        // Validación exhaustiva previa al envío
+        if (!idUsuario || !idEmpresa || productos.length === 0) {
+            msgError.innerText = 'Faltan datos críticos del pedido (Usuario, Empresa o Carrito vacío). Vuelva al catálogo.';
+            msgError.style.display = 'block';
+            return;
         }
 
-        // ─── Mostrar el total guardado en localStorage ───────────────────
-        const totalGuardado = localStorage.getItem('totalFinal') || '$0';
-        document.getElementById('totalDisplay').innerText = 'Total: ' + totalGuardado;
+        // BIEN FORMATEADO: Limpiamos los precios de signos de pesos, puntos o comas
+        const productosFormateados = productos.map(item => {
+            // Si el precio viene como string con "$", "." o "," lo limpiamos a número puro
+            let precioLimpio = String(item.precio).replace(/[^0-9.-]/g, ""); 
+            return {
+                id_producto : parseInt(item.id_producto),
+                cantidad    : parseInt(item.cantidad || 1),
+                precio      : parseFloat(precioLimpio)
+            };
+        });
 
-        // ─── Enviar el pedido al backend (puerto 5000) ───────────────────
-        async function enviarPedido() {
-            const productos   = JSON.parse(localStorage.getItem('pedidoFinal') || '[]');
-            const idEmpresa   = localStorage.getItem('id_empresa');
-            const metodoPago  = localStorage.getItem('metodoPagoFinal') || 'Efectivo';
+        console.log("🚀 Enviando Payload limpio al Backend:", {
+            id_usuario  : parseInt(idUsuario),
+            id_empresa  : parseInt(idEmpresa),
+            metodo_pago : metodoPago,
+            productos   : productosFormateados
+        });
 
-            // Validaciones mínimas antes de llamar al API
-            if (!idUsuario || !idEmpresa || productos.length === 0) {
-                const msgError = document.getElementById('mensajeError');
-                msgError.innerText = 'Faltan datos del pedido. Por favor vuelve al panel.';
-                msgError.style.display = 'block';
-                return;
-            }
+        try {
+            const respuesta = await fetch('http://localhost:5000/api/pedidos', {
+                method  : 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body    : JSON.stringify({
+                    id_usuario  : parseInt(idUsuario),
+                    id_empresa  : parseInt(idEmpresa),
+                    metodo_pago : metodoPago,
+                    productos   : productosFormateados
+                })
+            });
 
-            // Mapear al formato que espera POST /api/pedidos
-            const productosFormateados = productos.map(item => ({
-                id_producto : item.id,
-                cantidad    : item.cantidad || 1,
-                precio      : item.precio
-            }));
+            const data = await respuesta.json();
+            console.log("📥 Respuesta del Servidor Node:", data);
 
-            try {
-                const respuesta = await fetch('http://localhost:5000/api/pedidos', {
-                    method  : 'POST',
-                    headers : { 'Content-Type': 'application/json' },
-                    body    : JSON.stringify({
-                        id_usuario  : idUsuario,
-                        id_empresa  : idEmpresa,
-                        metodo_pago : metodoPago,
-                        productos   : productosFormateados
-                    })
-                });
-
-                const data = await respuesta.json();
-
-                if (respuesta.ok) {
-                    // Guardar el id del pedido para la página de estado
-                    localStorage.setItem('ultimo_id_pedido', data.id_pedido);
-                    // Actualizar el total con el valor real que devuelve el servidor
-                    document.getElementById('totalDisplay').innerText =
-                        'Total: $' + data.total;
-                    // Limpiar carrito
-                    localStorage.removeItem('pedidoFinal');
-                    localStorage.removeItem('totalFinal');
-                    localStorage.removeItem('metodoPagoFinal');
-                } else {
-                    const msgError = document.getElementById('mensajeError');
-                    msgError.innerText = 'Error al registrar el pedido: ' + (data.error || 'Intenta de nuevo');
-                    msgError.style.display = 'block';
-                }
-            } catch (err) {
-                console.error('Error de red:', err);
-                const msgError = document.getElementById('mensajeError');
-                msgError.innerText = 'No se pudo conectar con el servidor.';
+            if (respuesta.ok && data.id_pedido) {
+                // Guardar el ID definitivo generado por MySQL para el rastreador
+                localStorage.setItem('ultimo_id_pedido', data.id_pedido);
+                
+                // Actualizar la interfaz de éxito
+                document.getElementById('totalDisplay').innerText = 
+                    'Total Facturado: $' + parseFloat(data.total).toLocaleString('es-CO');
+                
+                // LIMPIEZA CONTROLADA: Borramos el carrito para evitar duplicados
+                localStorage.removeItem('pedidoFinal');
+                localStorage.removeItem('totalFinal');
+                msgError.style.display = 'none';
+            } else {
+                msgError.innerText = 'Error en SQL: ' + (data.error || 'Verifique restricciones de llaves foráneas.');
                 msgError.style.display = 'block';
             }
+        } catch (err) {
+            console.error('Error de red detectado:', err);
+            msgError.innerText = 'Error crítico: No hay conexión con el servidor de Node.js.';
+            msgError.style.display = 'block';
         }
+    }
 
-        enviarPedido();
-    </script>
+    // Ejecutar el procedimiento inmediatamente al cargar la vista
+    document.addEventListener("DOMContentLoaded", enviarPedido);
+</script>
 
 </body>
 </html>

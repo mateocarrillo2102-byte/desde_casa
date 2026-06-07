@@ -50,15 +50,15 @@
 
         <div class="grid-layout">
             
-            <div class="card">
+            <div class="card" id="tarjetaTrackingPedidos">
                 <h3 class="card-title">Product Tracking</h3>
-                <div class="list-item" style="border-bottom: none;">
+                <div class="list-item" style="border-bottom: none; padding-bottom: 0;">
                     <div>
                         <strong>Nuevas Órdenes Recibidas</strong>
                         <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Pendientes por despacho en cocina</div>
                     </div>
-                    <span class="btn-action" style="background: #2a2d4a; color: #b5aeff; margin: 0; cursor: pointer;">Ver lista</span>
                 </div>
+                <div id="listaPedidosFisica" style="margin-top: 15px; max-height: 250px; overflow-y: auto;"></div>
             </div>
 
             <div class="card">
@@ -79,21 +79,23 @@
 
     <script>
         window.onload = async function() {
-            // Garantizar la existencia de una sesión activa en localStorage
-            if (!localStorage.getItem('id_empresa') || localStorage.getItem('id_empresa') === 'null') {
-                console.warn("⚠️ Sesión no detectada. Inicializando con empresa de pruebas (ID: 1).");
-                localStorage.setItem('id_empresa', '1');
-            }
-            
+            // Capturar la sesión de la empresa activa
             const idEmpresa = localStorage.getItem('id_empresa');
             
+            if (!idEmpresa || idEmpresa === 'null') {
+                alert("Sesión corporativa inválida. Por favor, vuelva a iniciar sesión.");
+                window.location.href = 'login.html';
+                return;
+            }
+            
             try {
+                // 1. CARGA MÉTRICA AVANZADA
                 const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresa}/analitica-avanzada`);
-                if (!respuesta.ok) throw new Error("Fallo en respuesta del servidor");
+                if (!respuesta.ok) throw new Error("Fallo en respuesta de analítica avanzada");
                 
                 const datos = await respuesta.json();
                 
-                // Inyectar de manera segura la metadata dinámica desde el backend
+                // Mapeo dinámico en la UI
                 document.getElementById('lblNombreEmpresa').innerText = `🏪 ${datos.nombre}`; 
                 document.getElementById('lblTipoEmpresa').innerText = `Establecimiento comercial: ${datos.tipo}`;
                 document.getElementById('txtTotalRevenue').innerText = `$${parseFloat(datos.resumenFinanciero.revenueTotal).toLocaleString('es-CO')}`;
@@ -110,16 +112,55 @@
                     document.getElementById('txtBestSellerPrecio').innerText = "$0";
                 }
                 
-                // Inicializar renderizado de componentes visuales (Chart.js)
+                // Renderizar los gráficos de Chart.js
                 construirGraficos(datos);
 
+                // 2. CARGA DE PEDIDOS FÍSICOS EN LA TABLA
+                await cargarListaPedidosPendientes(idEmpresa);
+
             } catch (error) {
-                console.error("❌ Error al conectar con Node.js:", error);
+                console.error("❌ Error General en el Dashboard:", error);
+            }
+        }
+
+        async function cargarListaPedidosPendientes(idEmpresa) {
+            const listaContenedor = document.getElementById('listaPedidosFisica');
+            if (!listaContenedor) return;
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/pedidos/empresa/${idEmpresa}`);
+                if (!res.ok) throw new Error("Error en el endpoint de pedidos");
+                
+                const pedidos = await res.json();
+                listaContenedor.innerHTML = ''; // Limpieza de control
+
+                if (pedidos.length === 0) {
+                    listaContenedor.innerHTML = '<p style="color: var(--text-muted); font-size:13px; padding:10px 0;">No registras órdenes de despacho pendientes.</p>';
+                    return;
+                }
+
+                pedidos.forEach(p => {
+                    let colorBadge = p.estado === 'Pendiente' ? '#ff754c' : '#7cd38e';
+                    listaContenedor.innerHTML += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <div>
+                                <span style="font-weight:bold; color:#b5aeff; font-size:14px;">#${p.id_pedido}</span>
+                                <div style="font-size:12px; color:white; margin-top:2px;">Total: $${parseFloat(p.total).toLocaleString('es-CO')} (${p.metodo_pago})</div>
+                            </div>
+                            <span style="font-size:11px; background:${colorBadge}20; color:${colorBadge}; padding:4px 8px; border-radius:6px; font-weight:bold;">
+                                ${p.estado}
+                            </span>
+                        </div>
+                    `;
+                });
+
+            } catch (err) {
+                console.error("❌ Error inyectando lista de órdenes:", err);
+                listaContenedor.innerHTML = '<p style="color: #ff754c; font-size:12px;">Error al conectar con la base de datos de órdenes.</p>';
             }
         }
 
         function construirGraficos(datos) {
-            // 1. Gráfico de Barras (Invoice Overview)
             const ctxBarras = document.getElementById('chartBarras').getContext('2d');
             new Chart(ctxBarras, {
                 type: 'bar',
@@ -143,7 +184,6 @@
                 }
             });
 
-            // 2. Gráfico de Dona (Order Stats)
             const ctxDona = document.getElementById('chartDona').getContext('2d');
             new Chart(ctxDona, {
                 type: 'doughnut',
@@ -153,7 +193,7 @@
                         data: [datos.graficoDona.completados, datos.graficoDona.procesando, datos.graficoDona.cancelados],
                         backgroundColor: ['#6c5dd3', '#7cd38e', '#ff754c'],
                         borderWidth: 0
-                    }]
+            }]
                 },
                 options: {
                     responsive: true,

@@ -31,7 +31,7 @@ app.post('/api/empresa/registro', async (req, res) => {
         const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
         console.log("🔒 Contraseña encriptada con éxito para:", email);
 
-        const query = `INSERT INTO EMPRESA (nombre, direccion, telefono, tlpo, tarifa_envio, email, contraseña) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        const query = `INSERT INTO EMPRESA (nombre, direccion, telefono, tipo, tarifa_envio, email, contraseña) VALUES (?, ?, ?, ?, ?, ?, ?)`;
         const [resultado] = await pool.execute(query, [nombre, direccion, telefono, tipo, tarifa_envio, email, contrasenaEncriptada]);
         
         console.log("✅ Inserción exitosa en MySQL, ID:", resultado.insertId);
@@ -260,80 +260,107 @@ app.post('/api/pedidos', async (req, res) => {
 });
 
 // =================================================================
-// 4. MÓDULO DE ANALÍTICA AVANZADA Y PERFILES
+// ENDPOINT: OBTENER EL ESTADO EN TIEMPO REAL DE UN PEDIDO ESPECÍFICO
 // =================================================================
-
-app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
+app.get('/api/pedidos/:id', async (req, res) => {
     try {
-        const idEmpresa = req.params.id;
-
-        const [empresa] = await pool.execute('SELECT nombre, tlpo AS tipo, tarifa_envio FROM EMPRESA WHERE id_empresa = ?', [idEmpresa]);
-        if (empresa.length === 0) {
-            return res.status(404).json({ error: "Establecimiento no registrado." });
+        const idPedido = req.params.id;
+        const [rows] = await pool.execute('SELECT id_pedido, estado, total FROM PEDIDO WHERE id_pedido = ?', [idPedido]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Pedido no localizado en el sistema." });
         }
-
-        const [ventasMensuales] = await pool.execute(`
-            SELECT MONTHNAME(fecha) AS mes, SUM(total) AS total 
-            FROM PEDIDO 
-            WHERE id_empresa = ? AND estado = 'Entregado'
-            GROUP BY MONTH(fecha), MONTHNAME(fecha)
-            ORDER BY MONTH(fecha) ASC LIMIT 6
-        `, [idEmpresa]);
-
-        const [statsPedidos] = await pool.execute(`
-            SELECT 
-                COUNT(CASE WHEN estado = 'Entregado' THEN 1 END) AS completados,
-                COUNT(CASE WHEN estado = 'Pendiente' OR estado = 'En camino' THEN 1 END) AS procesando,
-                COUNT(CASE WHEN estado = 'Cancelado' THEN 1 END) AS cancelados,
-                SUM(total) AS ingresos_brutos
-            FROM PEDIDO WHERE id_empresa = ?
-        `, [idEmpresa]);
-
-        let productoEstrella = { nombre: "Ninguno", precio: 0, unidades: 0 };
-        try {
-            const [topProduct] = await pool.execute(`
-                SELECT p.nombre, p.precio, SUM(dp.cantidad) AS unidades
-                FROM DETALLE_PEDIDO dp
-                INNER JOIN PRODUCTO p ON dp.id_producto = p.id_producto
-                WHERE p.id_empresa = ?
-                GROUP BY p.id_producto, p.nombre, p.precio
-                ORDER BY unidades DESC LIMIT 1
-            `, [idEmpresa]);
-            if (topProduct.length > 0) productoEstrella = topProduct[0];
-        } catch (err) {
-            productoEstrella = { nombre: "Pizza Especial Familiar", precio: 32000, unidades: 142 };
-        }
-
-        const ingresos = statsPedidos[0].ingresos_brutos || 0;
-        return res.status(200).json({
-            nombre: empresa[0].nombre,
-            tipo: empresa[0].tipo, 
-            resumenFinanciero: { revenueTotal: ingresos },
-            graficoBarras: {
-                labels: ventasMensuales.map(v => v.mes).length ? ventasMensuales.map(v => v.mes) : ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-                valores: ventasMensuales.map(v => v.total).length ? ventasMensuales.map(v => v.total) : [450000, 620000, 550000, 890000, 710000, 954000]
-            },
-            graficoDona: {
-                completados: statsPedidos[0].completados || 0,
-                procesando: statsPedidos[0].procesando || 0,
-                cancelados: statsPedidos[0].cancelados || 0
-            },
-            bestSeller: productoEstrella
-        });
+        
+        return res.status(200).json(rows[0]);
     } catch (error) {
-        console.error("❌ Error analítico en server.js:", error.message);
+        console.error("❌ Error al consultar estado del pedido:", error.message);
         return res.status(500).json({ error: error.message });
     }
 });
 
-app.get('/api/empresas/:id', async (req, res) => {
+// =================================================================
+// 4. MÓDULO DE ANALÍTICA AVANZADA Y PERFILES
+// =================================================================
+app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
     try {
         const idEmpresa = req.params.id;
-        const [rows] = await pool.execute('SELECT nombre, tlpo AS tipo FROM EMPRESA WHERE id_empresa = ?', [idEmpresa]);
-        if (rows.length === 0) return res.status(404).json({ error: "Empresa no encontrada." });
-        return res.status(200).json(rows[0]);
+
+        const [empresa] = await pool.execute('SELECT nombre, tipo FROM EMPRESA WHERE id_empresa = ?', [idEmpresa]);
+        if (empresa.length === 0) return res.status(404).json({ error: "Establecimiento no registrado." });
+
+        const [pedidosCrudos] = await pool.execute('SELECT total, estado, fecha FROM PEDIDO WHERE id_empresa = ?', [idEmpresa]);
+        const [productosVendidosCrudos] = await pool.execute(`
+            SELECT p.nombre, p.precio, dp.cantidad
+            FROM DETALLE_PEDIDO dp
+            INNER JOIN PRODUCTO p ON dp.id_producto = p.id_producto
+            WHERE p.id_empresa = ?
+        `, [idEmpresa]);
+
+        const paqueteData = {
+            tarea: "analitica_avanzada_dashboard",
+            datos: { nombre_empresa: empresa[0].nombre, tipo_empresa: empresa[0].tipo, pedidos: pedidosCrudos, detalles_productos: productosVendidosCrudos }
+        };
+
+        const pythonProcess = spawn('python', ['analitica.py']);
+        
+        let respuestaData = ""; // 🛡️ EL ACUMULADOR DE DATOS CRÍTICO
+
+        pythonProcess.stdin.write(JSON.stringify(paqueteData));
+        pythonProcess.stdin.end();
+
+        // 1. Recibimos y unimos todos los fragmentos sin parsear aún
+        pythonProcess.stdout.on('data', (data) => {
+            respuestaData += data.toString();
+        });
+
+        // 2. Parseamos el JSON SOLO cuando el proceso de Python termine por completo
+        pythonProcess.stdout.on('end', () => {
+            try {
+                const jsonProcesado = JSON.parse(respuestaData.trim());
+                
+                // Si Python nos avisa de un error interno, lo mostramos limpiamente
+                if (jsonProcesado.error_python) {
+                    console.error("❌ Fallo lógico en Python:", jsonProcesado.detalle);
+                    return res.status(500).json({ error: jsonProcesado.mensaje });
+                }
+                
+                return res.status(200).json(jsonProcesado);
+            } catch (jsonErr) {
+                console.error("❌ Error Fatal al parsear JSON. Python envió esto:", respuestaData);
+                return res.status(500).json({ error: "Fallo de comunicación estructurada con el motor analítico." });
+            }
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+            console.error(`⚠️ Advertencia en consola de Python: ${data.toString()}`);
+        });
+
     } catch (error) {
+        console.error("❌ Fallo general en el puente Node-Python:", error.message);
         return res.status(500).json({ error: error.message });
+    }
+});
+
+// =================================================================
+// ENDPOINT: OBTENER TODOS LOS PEDIDOS ASOCIADOS A UNA EMPRESA
+// =================================================================
+app.get('/api/pedidos/empresa/:id', async (req, res) => {
+    const idEmpresa = req.params.id;
+    console.log(`📥 Consultando pedidos entrantes para la empresa ID: ${idEmpresa}`);
+    
+    try {
+        // Consultamos la tabla PEDIDO ordenando por los más recientes primero
+        const [rows] = await pool.execute(
+            'SELECT id_pedido, total, estado, metodo_pago FROM PEDIDO WHERE id_empresa = ? ORDER BY id_pedido DESC',
+            [idEmpresa]
+        );
+
+        // Si no hay filas, respondemos con una lista vacía en lugar de un error 404
+        return res.status(200).json(rows);
+        
+    } catch (error) {
+        console.error("❌ Error en MySQL al traer pedidos de la empresa:", error.message);
+        return res.status(500).json({ error: "Error interno del servidor al procesar la consulta." });
     }
 });
 
