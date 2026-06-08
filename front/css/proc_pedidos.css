@@ -1,0 +1,73 @@
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FDF8F0 0%, #F5EDE0 100%);
+            padding: 30px;
+        }
+        :root {
+            --desert-terracota: #D9643A;
+            --desert-cactus: #5A8F4C;
+            --desert-sun: #F4A236;
+            --desert-dark: #3D2B1F;
+            --desert-stone: #9C8E7B;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: var(--desert-dark); margin-bottom: 30px; }
+        .pedidos-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .pedido-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .pedido-info {
+            flex: 2;
+        }
+        .pedido-id {
+            font-weight: bold;
+            font-size: 18px;
+            color: var(--desert-terracota);
+        }
+        .pedido-total {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--desert-cactus);
+        }
+        .pedido-estado {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .estado-Pendiente { background: var(--desert-sun); color: var(--desert-dark); }
+        .estado-Preparacion { background: #6BA5B5; color: white; }
+        .estado-En\\ camino { background: #9C27B0; color: white; }
+        .estado-Entregado { background: var(--desert-cactus); color: white; }
+        .btn-estado {
+            background: var(--desert-terracota);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        .btn-estado:hover { background: #C25D3A; }
+        .btn-volver {
+            background: var(--desert-stone);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }

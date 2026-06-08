@@ -1,0 +1,112 @@
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FDF8F0 0%, #F5EDE0 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        :root {
+            --desert-terracota: #D9643A;
+            --desert-cactus: #5A8F4C;
+            --desert-sun: #F4A236;
+            --desert-dark: #3D2B1F;
+            --desert-stone: #9C8E7B;
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        .contenedor {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        h2 {
+            color: var(--desert-dark);
+            margin-bottom: 20px;
+        }
+
+        .grupo-formulario {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--desert-dark);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #E8D5B5;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .alerta-info {
+            background: #FFF5E6;
+            border-left: 4px solid var(--desert-sun);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--desert-terracota);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #C25D3A;
+        }
+
+        .btn-secondary {
+            background: var(--desert-stone);
+        }
+
+        .btn-secondary:hover {
+            background: var(--desert-dark);
+        }
+
+        .resultado {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .resultado.exito {
+            background: #D4EDDA;
+            color: var(--desert-cactus);
+        }
+
+        .resultado.error {
+            background: #F8D7DA;
+            color: var(--desert-terracota);
+        }
+
+        .botones-accion {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }

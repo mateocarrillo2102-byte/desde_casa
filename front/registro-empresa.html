@@ -2,23 +2,69 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Registro Corporativo - Desde Casa</title>
-    <link rel="stylesheet" href="css/estilos.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Empresarial - DomiClick Maicao</title>
+    <link rel="stylesheet" href="./css/registro.css">
 </head>
 <body>
     <div class="contenedor">
-        <h2>Afiliar Nueva Empresa (Maicao)</h2>
+        <h2>🏪 Afiliar Nueva Empresa</h2>
+        <p style="text-align: center; color: #8B7A66; margin-bottom: 25px; font-size: 14px;">
+            Únete a DomiClick y lleva tu negocio a más clientes en Maicao
+        </p>
+        
         <form id="formRegEmpresa">
-            <div class="grupo-formulario"><label>Nombre del Establecimiento:</label><input type="text" id="empNombre" required></div>
-            <div class="grupo-formulario"><label>Dirección Física:</label><input type="text" id="empDireccion" required></div>
-            <div class="grupo-formulario"><label>Teléfono Comercial:</label><input type="text" id="empTelefono" required></div>
-            <div class="grupo-formulario"><label>Tipo de Negocio:</label><input type="text" id="empTipo" placeholder="Restaurante, Droguería"></div>
-            <div class="grupo-formulario"><label>Tarifa Fija de Envío ($):</label><input type="number" id="empTarifa" value="2000"></div>
-            <div class="grupo-formulario"><label>Correo de Administrador:</label><input type="email" id="empEmail" required></div>
-            <div class="grupo-formulario"><label>Contraseña de Acceso:</label><input type="password" id="empContrasena" required></div>
-            <button type="submit" class="btn btn-exito">Crear Cuenta Corporativa</button>
+            <div class="grupo-formulario">
+                <label>📛 Nombre del Establecimiento</label>
+                <input type="text" id="empNombre" placeholder="Ej: Riner's Pizza" required>
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>📍 Dirección Física</label>
+                <input type="text" id="empDireccion" placeholder="Calle, barrio, local" required>
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>📞 Teléfono Comercial</label>
+                <input type="tel" id="empTelefono" placeholder="3001234567" required>
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>🏷️ Tipo de Negocio</label>
+                <select id="empTipo" required>
+                    <option value="">Selecciona una categoría</option>
+                    <option value="Restaurante">🍔 Restaurante / Comida Rápida</option>
+                    <option value="Farmacia">💊 Farmacia / Droguería</option>
+                    <option value="Supermercado">🛒 Supermercado / Tienda</option>
+                    <option value="Licores">🍺 Licores / Cervecería</option>
+                    <option value="Panaderia">🥖 Panadería / Pastelería</option>
+                    <option value="Otro">📦 Otro tipo de negocio</option>
+                </select>
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>🚚 Tarifa Fija de Envío ($)</label>
+                <input type="number" id="empTarifa" value="3000" step="500" min="0">
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>📧 Correo de Administrador</label>
+                <input type="email" id="empEmail" placeholder="admin@mirestaurante.com" required>
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>🔒 Contraseña de Acceso</label>
+                <input type="password" id="empContrasena" placeholder="Mínimo 6 caracteres" required>
+            </div>
+            
+            <button type="submit" class="btn btn-exito">✅ Crear Cuenta Corporativa</button>
         </form>
-        <div id="alertaEmpresa" class="json-alerta">Esperando envío...</div>
+        
+        <div id="alertaEmpresa" class="json-alerta">Complete el formulario para registrarse</div>
+        
+        <div class="link-login">
+            ¿Ya tienes cuenta? <a href="login.html">Iniciar sesión</a>
+        </div>
     </div>
 
     <script>
@@ -26,45 +72,87 @@
             e.preventDefault(); 
             
             const alerta = document.getElementById('alertaEmpresa');
-            alerta.innerText = "Enviando datos al servidor...";
-
+            const btn = document.querySelector('.btn-exito');
+            
+            // Validar contraseña (mínimo 6 caracteres)
+            const contrasena = document.getElementById('empContrasena').value;
+            if (contrasena.length < 6) {
+                alerta.innerHTML = "⚠️ La contraseña debe tener al menos 6 caracteres";
+                alerta.className = "json-alerta error";
+                return;
+            }
+            
+            // Validar email
+            const email = document.getElementById('empEmail').value;
+            if (!email.includes('@')) {
+                alerta.innerHTML = "⚠️ Ingrese un correo electrónico válido";
+                alerta.className = "json-alerta error";
+                return;
+            }
+            
+            // Validar teléfono (básico)
+            const telefono = document.getElementById('empTelefono').value;
+            if (telefono.length < 7) {
+                alerta.innerHTML = "⚠️ Ingrese un número de teléfono válido";
+                alerta.className = "json-alerta error";
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerText = "⏳ Registrando...";
+            alerta.innerHTML = "🔄 Enviando datos al servidor...";
+            alerta.className = "json-alerta";
+            
             const payload = {
                 nombre: document.getElementById('empNombre').value,
                 direccion: document.getElementById('empDireccion').value,
-                telefono: document.getElementById('empTelefono').value,
+                telefono: telefono,
                 tipo: document.getElementById('empTipo').value,
                 tarifa_envio: parseFloat(document.getElementById('empTarifa').value) || 0,
-                email: document.getElementById('empEmail').value,
-                contrasena: document.getElementById('empContrasena').value // Enviamos 'contrasena' con n al backend
+                email: email,
+                contrasena: contrasena
             };
-
+            
+            console.log("📦 Payload enviado:", payload);
+            
             try {
                 const respuesta = await fetch('http://localhost:5000/api/empresa/registro', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
-                // Leemos el texto puro primero para evitar que .json() congele la pantalla si viene vacío
-                const textoPlano = await respuesta.text();
-                console.log("Respuesta cruda del servidor:", textoPlano);
                 
-                const data = JSON.parse(textoPlano);
-
+                const data = await respuesta.json();
+                console.log("📥 Respuesta del servidor:", data);
+                
                 if (respuesta.ok) {
-                    alerta.innerHTML = `<strong>¡Registro Exitoso!</strong><br>Empresa ID: ${data.id_empresa}<br>Guardado en MySQL.`;
+                    alerta.innerHTML = `
+                        ✅ <strong>¡Registro Exitoso!</strong><br>
+                        Empresa ID: ${data.id_empresa}<br>
+                        Usuario ID: ${data.id_usuario}<br>
+                        Ya puedes iniciar sesión con tu correo y contraseña.
+                    `;
+                    alerta.className = "json-alerta exito";
+                    
+                    // Limpiar formulario
                     document.getElementById('formRegEmpresa').reset();
                     
+                    // Redirigir al login después de 2.5 segundos
                     setTimeout(() => {
                         window.location.href = 'login.html';
-                    }, 2000);
+                    }, 2500);
                 } else {
-                    alerta.innerText = "Error del servidor: " + (data.error || "Datos rechazados.");
+                    alerta.innerHTML = `❌ ${data.error || "Error al registrar la empresa. Intenta nuevamente."}`;
+                    alerta.className = "json-alerta error";
                 }
-
+                
             } catch (error) {
-                alerta.innerText = "Error crítico: El servidor no respondió o envió datos corruptos.";
-                console.error(error);
+                console.error("Error de red:", error);
+                alerta.innerHTML = "❌ Error crítico: No se pudo conectar con el servidor. ¿El servidor está corriendo?";
+                alerta.className = "json-alerta error";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "✅ Crear Cuenta Corporativa";
             }
         });
     </script>

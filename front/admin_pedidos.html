@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Administrar Pedidos - DomiClick</title>
+    <link rel="stylesheet" href="css/gestion_productos.css">
+</head>
+<body>
+    <div class="container">
+        <a href="login_empresa.html" class="btn-volver">⬅ Volver al Dashboard</a>
+        <h1>📋 Administrar Pedidos</h1>
+        <div id="pedidosContainer" class="pedidos-grid">
+            <p>Cargando pedidos...</p>
+        </div>
+    </div>
+
+    <script>
+        const estados = ['Pendiente', 'Preparacion', 'En camino', 'Entregado'];
+        
+        async function cargarPedidos() {
+            const idEmpresa = localStorage.getItem('id_empresa');
+            if (!idEmpresa) {
+                window.location.replace('login.html');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:5000/api/pedidos/empresa/${idEmpresa}`);
+                const pedidos = await response.json();
+                
+                const container = document.getElementById('pedidosContainer');
+                
+                if (pedidos.length === 0) {
+                    container.innerHTML = '<p>No hay pedidos registrados</p>';
+                    return;
+                }
+                
+                container.innerHTML = pedidos.map(pedido => `
+                    <div class="pedido-card">
+                        <div class="pedido-info">
+                            <div class="pedido-id">Pedido #${pedido.id_pedido}</div>
+                            <div>Método: ${pedido.metodo_pago}</div>
+                            <div>Fecha: ${new Date(pedido.fecha).toLocaleString()}</div>
+                        </div>
+                        <div class="pedido-total">$${parseFloat(pedido.total).toLocaleString('es-CO')}</div>
+                        <div class="pedido-estado estado-${pedido.estado.replace(/ /g, '\\ ')}">${pedido.estado}</div>
+                        <div>
+                            ${estados.map(estado => `
+                                <button class="btn-estado" onclick="actualizarEstado(${pedido.id_pedido}, '${estado}')">${estado === 'Pendiente' ? '📋' : estado === 'Preparacion' ? '🍳' : estado === 'En camino' ? '🛵' : '✅'} ${estado}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('pedidosContainer').innerHTML = '<p>Error al cargar pedidos</p>';
+            }
+        }
+        
+        async function actualizarEstado(idPedido, nuevoEstado) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado: nuevoEstado })
+                });
+                
+                if (response.ok) {
+                    mostrarToast(`✅ Pedido #${idPedido} actualizado a: ${nuevoEstado}`);
+                    cargarPedidos();
+                } else {
+                    mostrarToast("❌ Error al actualizar", true);
+                }
+            } catch (error) {
+                mostrarToast("❌ Error de conexión", true);
+            }
+        }
+        
+        function mostrarToast(mensaje, esError = false) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `position: fixed; bottom: 20px; right: 20px; background: ${esError ? '#D9643A' : '#5A8F4C'}; color: white; padding: 12px 20px; border-radius: 10px; z-index: 1100;`;
+            toast.innerText = mensaje;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        cargarPedidos();
+    </script>
+</body>
+</html>

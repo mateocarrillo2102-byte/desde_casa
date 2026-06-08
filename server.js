@@ -57,28 +57,141 @@ function ejecutarPython(datos) {
     });
 }
 
-// ==================== ENDPOINTS DE AUTENTICACIÓN ====================
-
+// ==================== REGISTRO DE EMPRESA (CON USUARIO) - CORREGIDO ====================
 app.post('/api/empresa/registro', async (req, res) => {
-    console.log("📥 DATOS RECIBIDOS:", req.body);
+    console.log("📥 Registro de empresa - Datos recibidos:", req.body);
+    
     const { nombre, direccion, telefono, tipo, tarifa_envio, email, contrasena } = req.body;
+    let conexion;
+    
     try {
+        if (!nombre || !direccion || !telefono || !email || !contrasena) {
+            return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
+        
+        conexion = await pool.getConnection();
+        await conexion.beginTransaction();
+        
+        // 1. Verificar si el email ya está registrado en USUARIO
+        const [existeUsuario] = await conexion.execute(
+            'SELECT id_usuario FROM USUARIO WHERE email = ?', 
+            [email]
+        );
+        
+        if (existeUsuario.length > 0) {
+            await conexion.rollback();
+            return res.status(400).json({ error: "Este correo ya está registrado" });
+        }
+        
+        // 2. Encriptar contraseña
         const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
-        const query = `INSERT INTO EMPRESA (nombre, direccion, telefono, tipo, tarifa_envio, email, contraseña) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        const [resultado] = await pool.execute(query, [nombre, direccion, telefono, tipo, tarifa_envio, email, contrasenaEncriptada]);
-        console.log("✅ Empresa registrada, ID:", resultado.insertId);
-        return res.status(201).json({ mensaje: "Empresa registrada con éxito", id_empresa: resultado.insertId });
+        
+        // 3. Insertar en USUARIO (credenciales + rol Empresa)
+        const [resultadoUsuario] = await conexion.execute(
+            `INSERT INTO USUARIO (nombre, email, contraseña, rol, telefono, metodo_pago) 
+             VALUES (?, ?, ?, 'Empresa', ?, 'Efectivo')`,
+            [nombre, email, contrasenaEncriptada, telefono]
+        );
+        
+        const id_usuario = resultadoUsuario.insertId;
+        console.log(`✅ Usuario creado con ID: ${id_usuario}`);
+        
+        // 4. Insertar en EMPRESA (datos comerciales + FK id_usuario) - SIN columna email
+        const [resultadoEmpresa] = await conexion.execute(
+            `INSERT INTO EMPRESA (nombre, direccion, telefono, tipo, tarifa_envio, id_usuario) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [nombre, direccion, telefono, tipo, parseFloat(tarifa_envio) || 0, id_usuario]
+        );
+        
+        console.log(`✅ Empresa creada con ID: ${resultadoEmpresa.insertId}`);
+        
+        // 5. Confirmar transacción
+        await conexion.commit();
+        
+        return res.status(201).json({ 
+            mensaje: "Empresa registrada con éxito", 
+            id_empresa: resultadoEmpresa.insertId,
+            id_usuario: id_usuario
+        });
+        
     } catch (error) {
-        console.error("❌ ERROR:", error.message);
-        return res.status(400).json({ error: error.message });
+        if (conexion) await conexion.rollback();
+        console.error("❌ ERROR EN REGISTRO DE EMPRESA:", error.message);
+        return res.status(500).json({ error: "Error interno del servidor: " + error.message });
+        
+    } finally {
+        if (conexion) conexion.release();
     }
 });
+
+// ==================== ACTUALIZAR PRODUCTO ====================
+app.put('/api/productos/:id', async (req, res) => {
+    try {
+        const id_producto = req.params.id;
+        const { nombre, precio, stock } = req.body;
+        
+        let query = 'UPDATE PRODUCTO SET ';
+        const updates = [];
+        const valores = [];
+        
+        if (nombre !== undefined) {
+            updates.push('nombre = ?');
+            valores.push(nombre);
+        }
+        if (precio !== undefined) {
+            updates.push('precio = ?');
+            valores.push(parseFloat(precio));
+        }
+        if (stock !== undefined) {
+            updates.push('stock = ?');
+            valores.push(parseInt(stock));
+        }
+        
+        if (updates.length === 0) {
+            return res.status(400).json({ error: "No hay datos para actualizar" });
+        }
+        
+        query += updates.join(', ') + ' WHERE id_producto = ?';
+        valores.push(id_producto);
+        
+        const [resultado] = await pool.execute(query, valores);
+        
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ error: "Producto no encontrado" });
+        }
+        
+        res.json({ mensaje: "Producto actualizado correctamente" });
+        
+    } catch (error) {
+        console.error("❌ Error al actualizar:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== ELIMINAR PRODUCTO ====================
+app.delete('/api/productos/:id', async (req, res) => {
+    try {
+        const id_producto = req.params.id;
+        const [resultado] = await pool.execute('DELETE FROM PRODUCTO WHERE id_producto = ?', [id_producto]);
+        
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ error: "Producto no encontrado" });
+        }
+        
+        res.json({ mensaje: "Producto eliminado correctamente" });
+        
+    } catch (error) {
+        console.error("❌ Error al eliminar:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== LOGIN ====================
 app.post('/api/auth/login', async (req, res) => {
     const { email, contrasena } = req.body;
     console.log(`🔐 Intento de login: ${email}`);
     
     try {
-        // CASO 1: CLIENTES (usuarios normales)
         const [usuarios] = await pool.execute(
             'SELECT id_usuario AS id, nombre, rol, contraseña FROM USUARIO WHERE email = ? AND rol = "Cliente"', 
             [email]
@@ -95,7 +208,6 @@ app.post('/api/auth/login', async (req, res) => {
             }
         }
         
-        // CASO 2: EMPRESAS (usuarios con rol Empresa que tienen FK en tabla EMPRESA)
         const [empresasUsuarios] = await pool.execute(
             `SELECT u.id_usuario AS id, u.nombre, u.contraseña, e.id_empresa 
              FROM USUARIO u
@@ -116,7 +228,6 @@ app.post('/api/auth/login', async (req, res) => {
             }
         }
         
-        // CASO 3: DOMICILIARIOS
         const [domiciliarios] = await pool.execute(
             'SELECT id_domiciliario AS id, nombre, contraseña FROM DOMICILIARIO WHERE email = ?', 
             [email]
@@ -141,6 +252,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// ==================== REGISTRO DE USUARIO CLIENTE ====================
 app.post('/api/usuarios', async (req, res) => {
     try {
         const { nombre, telefono, email, contrasena, metodo_pago, rol } = req.body;
@@ -188,12 +300,12 @@ app.get('/api/usuarios/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 // ==================== RECOMENDACIONES PERSONALIZADAS ====================
 app.get('/api/recomendaciones/:id_usuario', async (req, res) => {
     const idUsuario = req.params.id_usuario;
     
     try {
-        // 1. Obtener última compra del usuario
         const [ultimoPedido] = await pool.execute(`
             SELECT p.id_empresa, e.tipo, e.nombre as empresa_nombre
             FROM PEDIDO p
@@ -208,7 +320,6 @@ app.get('/api/recomendaciones/:id_usuario', async (req, res) => {
         if (ultimoPedido.length > 0) {
             const empresa = ultimoPedido[0];
             
-            // Recomendaciones basadas en último pedido
             if (empresa.tipo === 'Restaurante') {
                 recomendacion = `🍕 ¡Sigue antojado! Prueba otros productos de ${empresa.empresa_nombre} o explora más restaurantes en Maicao.`;
             } else if (empresa.tipo === 'Farmacia') {
@@ -217,7 +328,6 @@ app.get('/api/recomendaciones/:id_usuario', async (req, res) => {
                 recomendacion = `🛒 ¡Vuelve pronto! ${empresa.empresa_nombre} tiene nuevos productos que te pueden interesar.`;
             }
         } else {
-            // Para nuevos usuarios: productos más populares en Maicao
             const [populares] = await pool.execute(`
                 SELECT p.nombre, COUNT(dp.id_producto) as total
                 FROM DETALLE_PEDIDO dp
@@ -242,7 +352,6 @@ app.get('/api/recomendaciones/:id_usuario', async (req, res) => {
 });
 
 // ==================== ENDPOINTS DE PRODUCTOS ====================
-
 app.get('/api/productos/catalogo-cliente', async (req, res) => {
     try {
         const { buscar, id_empresa } = req.query;
@@ -315,7 +424,6 @@ app.post('/api/productos', async (req, res) => {
 });
 
 // ==================== ENDPOINTS DE PEDIDOS ====================
-
 app.get('/api/pedidos/usuario/:id', async (req, res) => {
     try {
         const idUsuario = req.params.id;
@@ -340,7 +448,6 @@ app.post('/api/pedidos', async (req, res) => {
         conexion = await pool.getConnection();
         await conexion.beginTransaction();
 
-        // Verificar stock antes de comenzar
         for (const item of productos) {
             const [stockActual] = await conexion.execute('SELECT stock FROM PRODUCTO WHERE id_producto = ?', [item.id_producto]);
             if (stockActual.length === 0) throw new Error(`Producto ${item.id_producto} no existe`);
@@ -393,9 +500,7 @@ app.get('/api/pedidos/:id', async (req, res) => {
     }
 });
 
-// ==================== ENDPOINTS PARA EMPRESAS (CORREGIDOS) ====================
-
-// Obtener pedidos de una empresa
+// ==================== ENDPOINTS PARA EMPRESAS ====================
 app.get('/api/pedidos/empresa/:id', async (req, res) => {
     const idEmpresa = req.params.id;
     console.log(`📥 Consultando pedidos para empresa ID: ${idEmpresa}`);
@@ -412,44 +517,30 @@ app.get('/api/pedidos/empresa/:id', async (req, res) => {
     }
 });
 
-// ==================== ENDPOINT DE ANALÍTICA CORREGIDO ====================
 app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
     const id_empresa = req.params.id;
-    console.log(`📊 [SERVER] Analítica solicitada para empresa ID: ${id_empresa} (tipo: ${typeof id_empresa})`);
+    console.log(`📊 Analítica solicitada para empresa ID: ${id_empresa}`);
     
     try {
-        // Validar que ID sea número
         const idNumerico = parseInt(id_empresa);
         if (isNaN(idNumerico)) {
-            console.error("❌ ID no es número válido:", id_empresa);
             return res.status(400).json({ error: "ID de empresa inválido" });
         }
         
-        // 1. Verificar si la empresa existe
         const [empresa] = await pool.execute(
             'SELECT id_empresa, nombre, tipo FROM EMPRESA WHERE id_empresa = ?', 
             [idNumerico]
         );
         
-        console.log(`📊 [SERVER] Resultado query empresa:`, empresa);
-        
         if (!empresa || empresa.length === 0) {
-            console.error(`❌ Empresa con ID ${idNumerico} no encontrada`);
-            return res.status(404).json({ 
-                error: `Empresa no encontrada con ID: ${idNumerico}`,
-                sugerencia: "Verifica que el ID exista en la tabla EMPRESA"
-            });
+            return res.status(404).json({ error: "Empresa no encontrada" });
         }
         
-        // 2. Obtener pedidos de la empresa
         const [pedidos] = await pool.execute(
             'SELECT estado, total, fecha FROM PEDIDO WHERE id_empresa = ?', 
             [idNumerico]
         );
         
-        console.log(`📊 [SERVER] Pedidos encontrados: ${pedidos.length}`);
-        
-        // 3. Obtener detalles de productos (opcional)
         let detallesProductos = [];
         try {
             [detallesProductos] = await pool.execute(`
@@ -460,11 +551,9 @@ app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
                 WHERE ped.id_empresa = ?
             `, [idNumerico]);
         } catch (err) {
-            console.warn("⚠️ No se pudieron obtener detalles de productos:", err.message);
+            console.warn("⚠️ No se pudieron obtener detalles:", err.message);
         }
         
-        // 4. Preparar respuesta manual (sin Python para prueba)
-        // Calcular estadísticas básicas
         let completados = 0, procesando = 0, cancelados = 0, ingresos = 0;
         
         for (const p of pedidos) {
@@ -479,7 +568,6 @@ app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
             }
         }
         
-        // Calcular best seller
         let bestSeller = { nombre: "Sin ventas", precio: 0, unidades: 0 };
         const contadorProductos = {};
         for (const dp of detallesProductos) {
@@ -498,7 +586,6 @@ app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
             }
         }
         
-        // Respuesta de prueba (sin Python)
         const respuestaPrueba = {
             nombre: empresa[0].nombre,
             tipo: empresa[0].tipo || "Comercio",
@@ -511,36 +598,28 @@ app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
             bestSeller: bestSeller
         };
         
-        console.log("✅ [SERVER] Enviando respuesta exitosa");
         return res.status(200).json(respuestaPrueba);
         
     } catch (error) {
-        console.error("❌ [SERVER] Error crítico:", error);
-        return res.status(500).json({ 
-            error: "Error interno del servidor",
-            detalle: error.message 
-        });
+        console.error("❌ Error crítico:", error);
+        return res.status(500).json({ error: "Error interno del servidor", detalle: error.message });
     }
 });
 
-// Obtener ID de empresa real a partir del ID de usuario
 app.get('/api/empresa/de-usuario/:id_usuario', async (req, res) => {
     const id_usuario = req.params.id_usuario;
     console.log(`🔍 Buscando empresa para usuario ID: ${id_usuario}`);
     
     try {
-        // Buscar en la tabla EMPRESA usando la FK id_usuario
         const [empresa] = await pool.execute(
             'SELECT id_empresa FROM EMPRESA WHERE id_usuario = ?', 
             [id_usuario]
         );
         
         if (empresa.length === 0) {
-            console.error(`❌ No se encontró empresa para usuario ${id_usuario}`);
             return res.status(404).json({ error: "Empresa no encontrada para este usuario" });
         }
         
-        console.log(`✅ Empresa encontrada: ID ${empresa[0].id_empresa}`);
         res.json({ id_empresa: empresa[0].id_empresa });
         
     } catch (err) {
@@ -549,7 +628,6 @@ app.get('/api/empresa/de-usuario/:id_usuario', async (req, res) => {
     }
 });
 
-// Auto-asignar pedido con Python
 app.post('/api/pedidos/auto-asignar', async (req, res) => {
     const { id_pedido } = req.body;
     try {
@@ -594,10 +672,10 @@ app.post('/api/pedidos/auto-asignar', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// ==================== ENDPOINT: TOP PRODUCTOS MÁS VENDIDOS ====================
+
+// ==================== TOP PRODUCTOS MÁS VENDIDOS ====================
 app.get('/api/empresas/:id/top-productos', async (req, res) => {
     const id_empresa = req.params.id;
-    console.log(`📊 Solicitando top productos para empresa: ${id_empresa}`);
     
     try {
         const idNumerico = parseInt(id_empresa);
@@ -620,7 +698,6 @@ app.get('/api/empresas/:id/top-productos', async (req, res) => {
             LIMIT 10
         `, [idNumerico]);
         
-        console.log(`✅ Encontrados ${productos.length} productos con ventas`);
         return res.status(200).json(productos);
         
     } catch (error) {
@@ -628,14 +705,14 @@ app.get('/api/empresas/:id/top-productos', async (req, res) => {
         return res.status(500).json({ error: "Error interno del servidor" });
     }
 });
-// ==================== ENDPOINT: ESTADÍSTICAS DETALLADAS DE PRODUCTOS ====================
+
+// ==================== ESTADÍSTICAS DE PRODUCTOS ====================
 app.get('/api/empresas/:id/estadisticas-productos', async (req, res) => {
     const id_empresa = req.params.id;
     
     try {
         const idNumerico = parseInt(id_empresa);
         
-        // Total de productos vendidos
         const [totalVendido] = await pool.execute(`
             SELECT COALESCE(SUM(dp.cantidad), 0) as total
             FROM DETALLE_PEDIDO dp
@@ -643,7 +720,6 @@ app.get('/api/empresas/:id/estadisticas-productos', async (req, res) => {
             WHERE ped.id_empresa = ? AND ped.estado = 'Entregado'
         `, [idNumerico]);
         
-        // Producto más caro vendido
         const [productoMasCaro] = await pool.execute(`
             SELECT p.nombre, p.precio
             FROM PRODUCTO p
@@ -663,9 +739,62 @@ app.get('/api/empresas/:id/estadisticas-productos', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// ==================== ACTUALIZAR ESTADO DEL PEDIDO ====================
+app.put('/api/pedidos/:id/estado', async (req, res) => {
+    const id_pedido = req.params.id;
+    const { estado } = req.body;
+    
+    const estadosValidos = ['Pendiente', 'Preparacion', 'En camino', 'Entregado', 'Cancelado'];
+    
+    if (!estadosValidos.includes(estado)) {
+        return res.status(400).json({ error: "Estado no válido" });
+    }
+    
+    try {
+        const [resultado] = await pool.execute(
+            'UPDATE PEDIDO SET estado = ? WHERE id_pedido = ?',
+            [estado, id_pedido]
+        );
+        
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ error: "Pedido no encontrado" });
+        }
+        
+        // Si el estado es Entregado, liberar al domiciliario
+        if (estado === 'Entregado') {
+            const [pedido] = await pool.execute('SELECT id_domiciliario FROM PEDIDO WHERE id_pedido = ?', [id_pedido]);
+            if (pedido[0]?.id_domiciliario) {
+                await pool.execute('UPDATE DOMICILIARIO SET estado = "Disponible" WHERE id_domiciliario = ?', [pedido[0].id_domiciliario]);
+            }
+        }
+        
+        res.json({ mensaje: `Estado actualizado a: ${estado}` });
+        
+    } catch (error) {
+        console.error("❌ Error al actualizar estado:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
 
-// Iniciar servidor
+// ==================== OBTENER TODOS LOS PEDIDOS (PARA ADMIN) ====================
+app.get('/api/pedidos', async (req, res) => {
+    try {
+        const [pedidos] = await pool.execute(`
+            SELECT p.id_pedido, p.total, p.estado, p.fecha, u.nombre as cliente_nombre, e.nombre as empresa_nombre
+            FROM PEDIDO p
+            INNER JOIN USUARIO u ON p.id_usuario = u.id_usuario
+            INNER JOIN EMPRESA e ON p.id_empresa = e.id_empresa
+            ORDER BY p.id_pedido DESC
+        `);
+        res.json(pedidos);
+    } catch (error) {
+        console.error("❌ Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== INICIAR SERVIDOR ====================
 const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-}); 
+});
