@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Executive Dashboard - DomiClick</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="./css/dashboard.css">
+    <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
 
@@ -13,24 +13,25 @@
         <div class="header-top">
             <div>
                 <h1 id="lblNombreEmpresa">🏪 Cargando Panel Corporativo...</h1>
-                <span style="color: var(--text-muted); font-size: 14px;" id="lblTipoEmpresa">Establecimiento comercial</span>
+                <span style="color: rgba(255,255,255,0.7); font-size: 14px;" id="lblTipoEmpresa">Establecimiento comercial</span>
             </div>
-            <a href="gestion_productos.html" class="btn-action">📦 Gestionar Catálogo</a>
-            <button onclick="logout()" class="btn-action" style="background-color: #ff4c4c; border: none; cursor: pointer;">
-                🚪 Cerrar Sesión
-            </button>
+            <div style="display: flex; gap: 10px;">
+                <a href="gestion_productos.html" class="btn-action">📦 Gestionar Catálogo</a>
+                <button onclick="logout()" class="btn-action" style="background-color: #ff4c4c;">
+                    🚪 Cerrar Sesión
+                </button>
+            </div>
         </div>
         
-
         <div class="grid-layout">
             
             <div class="card">
                 <h3 class="card-title">Invoice Overview</h3>
                 <div class="invoice-box">
                     <div class="revenue-sidebar">
-                        <span style="color: var(--text-muted); font-size: 13px;">Total Revenue</span>
-                        <div class="revenue-total" id="txtTotalRevenue">$0,00</div>
-                        <span id="txtCrecimiento" style="color: var(--text-muted); font-size: 12px;">Aún sin datos de ventas</span>
+                        <span style="color: #666; font-size: 13px;">Total Revenue</span>
+                        <div class="revenue-total" id="txtTotalRevenue">$0</div>
+                        <span id="txtCrecimiento" style="color: #666; font-size: 12px;">Ingresos totales</span>
                     </div>
                     <div class="chart-wrapper">
                         <canvas id="chartBarras"></canvas>
@@ -54,88 +55,271 @@
 
         <div class="grid-layout">
             
-            <div class="card" id="tarjetaTrackingPedidos">
-                <h3 class="card-title">Product Tracking</h3>
-                <div class="list-item" style="border-bottom: none; padding-bottom: 0;">
-                    <div>
-                        <strong>Nuevas Órdenes Recibidas</strong>
-                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Pendientes por despacho en cocina</div>
-                    </div>
+            <div class="card">
+                <h3 class="card-title">📋 Órdenes Recientes</h3>
+                <div id="listaPedidosFisica" style="margin-top: 15px;">
+                    <p style="color: #999;">Cargando pedidos...</p>
                 </div>
-                <div id="listaPedidosFisica" style="margin-top: 15px; max-height: 250px; overflow-y: auto;"></div>
             </div>
 
             <div class="card">
-                <h3 class="card-title">Best Selling Product</h3>
+                <h3 class="card-title">
+                    🏆 Best Selling Product
+                    <button onclick="verProductosMasVendidos()" class="btn-action btn-secondary" style="padding: 5px 12px; font-size: 12px;">
+                        Ver todos 📊
+                    </button>
+                </h3>
                 <div class="product-showcase">
-                    <div class="product-img">🍔</div>
+                    <div class="product-img">🏆</div>
                     <div>
-                        <strong id="txtBestSellerNombre" style="font-size: 16px;">Cargando...</strong>
-                        <div id="txtBestSellerPrecio" style="color: #b5aeff; font-weight: 700; margin-top: 4px;">$0</div>
+                        <strong id="txtBestSellerNombre" style="font-size: 18px;">Cargando...</strong>
+                        <div id="txtBestSellerPrecio" style="color: #4a6eff; font-weight: 700; margin-top: 5px;">$0</div>
+                        <div id="txtBestSellerUnidades" style="color: #666; font-size: 12px; margin-top: 5px;">Unidades vendidas: 0</div>
                     </div>
                 </div>
-                <a href="eco_productos.html" class="btn-action" style="margin-top: 20px; width: 100%; text-align: center; box-sizing: border-box; background: #2a2d4a; color: #b5aeff;">📊 Ver Estadísticas Detalladas</a>
             </div>
 
         </div>
 
     </div>
 
+    <!-- Modal para productos más vendidos -->
+    <div id="modalProductos" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Productos Más Vendidos</h2>
+                <button class="close-modal" onclick="cerrarModal()">&times;</button>
+            </div>
+            <div id="listaProductosModal">
+                <p style="color: #999;">Cargando...</p>
+            </div>
+        </div>
+    </div>
+
     <script>
+    let chartBarras = null;
+    let chartDona = null;
+    let datosCompletos = null; // Guardar datos para el modal
+
     window.onload = async function() {
-        const idUsuario = localStorage.getItem('id_empresa');
-        if (!idUsuario) {
+        // Obtener ID real de la empresa
+        let idEmpresa = localStorage.getItem('id_empresa');
+        let idUsuario = localStorage.getItem('id_usuario');
+        let rol = localStorage.getItem('rol');
+        
+        if (!idEmpresa && idUsuario && rol === 'Empresa') {
+            try {
+                const respuesta = await fetch(`http://localhost:5000/api/empresa/de-usuario/${idUsuario}`);
+                const datos = await respuesta.json();
+                idEmpresa = datos.id_empresa;
+                localStorage.setItem('id_empresa', idEmpresa);
+            } catch (error) {
+                mostrarMensajeError("Error al cargar la empresa");
+                setTimeout(() => window.location.replace('login.html'), 2000);
+                return;
+            }
+        }
+        
+        if (!idEmpresa || rol !== 'Empresa') {
             window.location.replace('login.html');
             return;
         }
-
-        try {
-            // 1. Resolver el ID real de la empresa
-            const resIdentidad = await fetch(`http://localhost:5000/api/empresa/de-usuario/${idUsuario}`);
-            if (!resIdentidad.ok) throw new Error("No se pudo vincular el usuario a una empresa.");
-            
-            const dataIdentidad = await resIdentidad.json();
-            const idEmpresaReal = dataIdentidad.id_empresa;
-
-            // 2. Cargar analítica
-            const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresaReal}/analitica-avanzada`);
-            if (!respuesta.ok) throw new Error("Error al obtener datos analíticos.");
-            
-            const datos = await respuesta.json();
-
-            // 3. Renderizado de datos
-            document.getElementById('lblNombreEmpresa').innerText = `🏪 ${datos.nombre}`;
-            document.getElementById('lblTipoEmpresa').innerText = `Establecimiento: ${datos.tipo}`;
-            document.getElementById('txtTotalRevenue').innerText = `$${parseFloat(datos.resumenFinanciero.revenueTotal).toLocaleString('es-CO')}`;
-
-            // 4. Ejecutar funciones gráficas
-            construirGraficos(datos);
-            await cargarListaPedidosPendientes(idEmpresaReal);
-
-        } catch (error) {
-            console.error("❌ Error crítico en Dashboard:", error);
-            // Ya no dará error de token porque el catch está correctamente cerrado
-        }
+        
+        await cargarDashboard(idEmpresa);
     };
 
-    async function cargarListaPedidosPendientes(idEmpresa) {
+    async function cargarDashboard(idEmpresa) {
+        try {
+            const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresa}/analitica-avanzada`);
+            
+            if (!respuesta.ok) {
+                throw new Error("Error al cargar datos");
+            }
+            
+            datosCompletos = await respuesta.json();
+            console.log("Datos recibidos:", datosCompletos);
+            
+            // Actualizar UI
+            document.getElementById('lblNombreEmpresa').innerText = `🏪 ${datosCompletos.nombre || 'Mi Empresa'}`;
+            document.getElementById('lblTipoEmpresa').innerText = `Establecimiento: ${datosCompletos.tipo || 'Comercio'}`;
+            document.getElementById('txtTotalRevenue').innerText = `$${parseFloat(datosCompletos.resumenFinanciero?.revenueTotal || 0).toLocaleString('es-CO')}`;
+            
+            // Actualizar best seller
+            if (datosCompletos.bestSeller) {
+                document.getElementById('txtBestSellerNombre').innerText = datosCompletos.bestSeller.nombre || 'Sin datos';
+                document.getElementById('txtBestSellerPrecio').innerText = `$${parseFloat(datosCompletos.bestSeller.precio || 0).toLocaleString('es-CO')}`;
+                document.getElementById('txtBestSellerUnidades').innerText = `Unidades vendidas: ${datosCompletos.bestSeller.unidades || 0}`;
+            }
+            
+            // Actualizar gráfico de dona
+            if (datosCompletos.graficoDona) {
+                document.getElementById('txtCompleto').innerText = datosCompletos.graficoDona.completados || 0;
+                document.getElementById('txtProceso').innerText = datosCompletos.graficoDona.procesando || 0;
+                document.getElementById('txtCancelado').innerText = datosCompletos.graficoDona.cancelados || 0;
+                crearGraficoDona(datosCompletos.graficoDona);
+            }
+            
+            // Crear gráfico de barras
+            if (datosCompletos.graficoBarras) {
+                crearGraficoBarras(datosCompletos.graficoBarras);
+            }
+            
+            // Cargar lista de pedidos
+            await cargarListaPedidos(idEmpresa);
+            
+        } catch (error) {
+            console.error("Error:", error);
+            document.getElementById('lblNombreEmpresa').innerHTML = '🏪 Error al cargar datos';
+        }
+    }
+
+    async function cargarListaPedidos(idEmpresa) {
         const listaContenedor = document.getElementById('listaPedidosFisica');
-        if (!listaContenedor) return;
         try {
             const res = await fetch(`http://localhost:5000/api/pedidos/empresa/${idEmpresa}`);
             const pedidos = await res.json();
-            listaContenedor.innerHTML = pedidos.length === 0 ? '<p>No hay órdenes.</p>' : '';
-        } catch (err) { console.error(err); }
+            
+            if (!Array.isArray(pedidos) || pedidos.length === 0) {
+                listaContenedor.innerHTML = '<p style="color: #999;">📭 No hay pedidos registrados</p>';
+                return;
+            }
+            
+            listaContenedor.innerHTML = pedidos.slice(0, 5).map(pedido => `
+                <div class="pedido-item">
+                    <div><strong>Pedido #${pedido.id_pedido}</strong></div>
+                    <div>💰 Total: $${parseFloat(pedido.total || 0).toLocaleString('es-CO')}</div>
+                    <div>📊 Estado: ${pedido.estado || 'Pendiente'}</div>
+                    <div>📅 Fecha: ${pedido.fecha ? new Date(pedido.fecha).toLocaleDateString() : 'N/A'}</div>
+                </div>
+            `).join('');
+            
+        } catch (err) {
+            console.error("Error:", err);
+            listaContenedor.innerHTML = '<p style="color: #ff4c4c;">❌ Error al cargar pedidos</p>';
+        }
     }
 
-    function construirGraficos(datos) {
-        console.log("Datos para graficar:", datos);
+    function crearGraficoBarras(datos) {
+        const ctx = document.getElementById('chartBarras').getContext('2d');
+        
+        if (chartBarras) {
+            chartBarras.destroy();
+        }
+        
+        chartBarras = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: datos.labels || ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Ventas ($)',
+                    data: datos.valores || [0, 0, 0, 0, 0, 0],
+                    backgroundColor: '#4a6eff',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'top' }
+                }
+            }
+        });
+    }
+
+    function crearGraficoDona(datos) {
+        const ctx = document.getElementById('chartDona').getContext('2d');
+        
+        if (chartDona) {
+            chartDona.destroy();
+        }
+        
+        chartDona = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completados', 'En Proceso', 'Cancelados'],
+                datasets: [{
+                    data: [datos.completados || 0, datos.procesando || 0, datos.cancelados || 0],
+                    backgroundColor: ['#4a6eff', '#ffc107', '#ff4c4c'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // Función para ver todos los productos más vendidos
+    async function verProductosMasVendidos() {
+        const modal = document.getElementById('modalProductos');
+        const listaContainer = document.getElementById('listaProductosModal');
+        
+        // Mostrar modal con loading
+        modal.style.display = 'flex';
+        listaContainer.innerHTML = '<p style="color: #999;">Cargando productos...</p>';
+        
+        try {
+            const idEmpresa = localStorage.getItem('id_empresa');
+            const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresa}/top-productos`);
+            
+            if (!respuesta.ok) {
+                throw new Error("Error al cargar productos");
+            }
+            
+            const productos = await respuesta.json();
+            
+            if (!productos || productos.length === 0) {
+                listaContainer.innerHTML = '<p style="color: #999;">📭 No hay productos vendidos aún</p>';
+                return;
+            }
+            
+            // Mostrar lista de productos
+            listaContainer.innerHTML = productos.map((producto, index) => `
+                <div class="producto-item">
+                    <div class="producto-rank">#${index + 1}</div>
+                    <div class="producto-info">
+                        <div class="producto-nombre">${producto.nombre}</div>
+                        <div class="producto-stats">Precio: $${parseFloat(producto.precio).toLocaleString('es-CO')}</div>
+                    </div>
+                    <div class="producto-unidades">${producto.total_vendido} uds</div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error("Error:", error);
+            listaContainer.innerHTML = '<p style="color: #ff4c4c;">❌ Error al cargar los productos</p>';
+        }
+    }
+
+    function cerrarModal() {
+        document.getElementById('modalProductos').style.display = 'none';
+    }
+
+    function mostrarMensajeError(mensaje) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #ff4c4c; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999;';
+        errorDiv.innerText = mensaje;
+        document.body.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 3000);
     }
 
     function logout() {
         localStorage.clear();
         window.location.replace('login.html');
     }
-</script>
+
+    // Cerrar modal al hacer clic fuera
+    window.onclick = function(event) {
+        const modal = document.getElementById('modalProductos');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    }
+    </script>
 </body>
 </html>

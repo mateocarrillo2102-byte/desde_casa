@@ -2,269 +2,580 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>DomiClick - Tu Portal de Domicilios</title>
-    <link rel="stylesheet" href="./css/dashboard.css">
-    <link rel="stylesheet" href="./css/cliente.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DomiClick - Mi Cuenta</title>
+    <link rel="stylesheet" href="css/cliente.css">
 </head>
 <body>
+    <div class="navbar">
+        <div class="logo">
+            <img src="img/logo.jpeg" alt="DomiClick" class="logo-img" onerror="this.style.display='none'">
+            <div>
+                Domi<span>Click</span>
+                <div class="logo-slogan">★ RÁPIDO, SEGURO Y CERCA DE TI ★</div>
+            </div>
+        </div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="cambiarTab('catalogo')">🛍️ Catálogo</button>
+            <button class="tab-btn" onclick="cambiarTab('pedidos')">📋 Mis Pedidos</button>
+            <button class="tab-btn" onclick="cambiarTab('cuenta')">👤 Mi Cuenta</button>
+        </div>
+        <div class="user-info">
+            <span id="userName">Invitado</span>
+            <button class="btn-logout" onclick="logout()">🚪 Cerrar Sesión</button>
+        </div>
+    </div>
 
-    <aside class="app-sidebar">
-        <div>
-            <div class="app-logo">🛵 DomiClick</div>
-            <ul class="nav-menu">
-                <li class="nav-item active" onclick="cambiarSeccion('inicio', this)">🏠 Explorar Catálogo</li>
-                <li class="nav-item" onclick="cambiarSeccion('pedidos', this)">📦 Mis Pedidos</li>
-                <li class="nav-item" onclick="cambiarSeccion('perfil', this)">👤 Mi Cuenta</li>
-            </ul>
+    <div class="container">
+        <!-- Pestaña Catálogo -->
+        <div id="tab-catalogo" class="tab-content active">
+            <!-- SECCIÓN DE BÚSQUEDA - CORRECTAMENTE UBICADA -->
+            <div class="search-section">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="🔍 Buscar producto o restaurante...">
+                    <button id="searchBtn">Buscar</button>
+                </div>
+                
+                <div class="filters">
+                    <button class="filter-chip active" data-filter="all">🍽️ Todos</button>
+                    <button class="filter-chip" data-filter="Restaurante">🍔 Restaurantes</button>
+                    <button class="filter-chip" data-filter="Farmacia">💊 Farmacias</button>
+                    <button class="filter-chip" data-filter="Supermercado">🛒 Supermercados</button>
+                </div>
+                
+                <div class="recomendaciones" id="recomendacionesContainer">
+                    <div class="recomendacion-box">
+                        <span style="font-weight: bold;">💡 Recomendado para ti: </span>
+                        <span id="recomendacionTexto">Basado en tus pedidos anteriores</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="two-columns">
+                <div class="catalogo">
+                    <h2>🍔 Catálogo de Productos</h2>
+                    <div id="productosContainer">
+                        <div class="loading">🔄 Cargando productos...</div>
+                    </div>
+                </div>
+
+                <div class="carrito">
+                    <h3>🛒 Mi Carrito</h3>
+                    <div id="carritoItems" class="carrito-items">
+                        <p style="color: #999; text-align: center;">El carrito está vacío.</p>
+                    </div>
+                    <div class="carrito-total">
+                        Total: $<span id="carritoTotal">0</span>
+                    </div>
+                    <div class="metodo-pago">
+                        <label>💳 MÉTODO DE PAGO:</label>
+                        <select id="metodoPago">
+                            <option value="Efectivo">💰 Efectivo al recibir</option>
+                            <option value="Tarjeta">💳 Tarjeta de crédito/débito</option>
+                            <option value="Transferencia">🏦 Transferencia bancaria</option>
+                        </select>
+                    </div>
+                    <button class="btn-pedido" id="btnRealizarPedido" onclick="realizarPedido()">📦 Realizar Pedido</button>
+                </div>
+            </div>
         </div>
 
-        <button onclick="logout()" style="background: #ff754c15; color: var(--red-danger); border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%;">
-            Cerrar Sesión 🚪
-        </button>
-    </aside>
-
-    <main class="main-content">
-        
-        <section id="view-inicio" class="view-section active">
-            <div style="margin-bottom: 30px;">
-                <h1 style="margin: 0 0 8px 0;">¡Hola, <span id="nombreCliente" style="color: #b5aeff;">Invitado</span>! 👋</h1>
-                <p style="color: var(--text-muted); margin: 0;">Busca tus productos favoritos y gestiona tu orden en línea.</p>
+        <!-- Pestaña Mis Pedidos -->
+        <div id="tab-pedidos" class="tab-content">
+            <h2>📋 Historial de Pedidos</h2>
+            <div id="pedidosContainer" class="pedidos-list">
+                <div class="loading">🔄 Cargando tus pedidos...</div>
             </div>
+        </div>
 
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
-                <div>
-                    <div class="card" style="padding: 20px;">
-                        <h3 class="card-title" style="margin-bottom: 15px;">🏪 Catálogo de Productos</h3>
-                        
-                        <div id="catalogoProductos" class="productos-grid">
-                            <p style="color: var(--text-muted); padding: 10px;">Sincronizando productos con el servidor...</p>
-                        </div>
+        <!-- Pestaña Mi Cuenta -->
+        <div id="tab-cuenta" class="tab-content">
+            <div class="cuenta-wrapper">
+                <div class="cuenta-info">
+                    <h2>👤 Mi Cuenta</h2>
+                    <div class="campo">
+                        <label>📛 NOMBRE COMPLETO</label>
+                        <p id="cuentaNombre">-</p>
                     </div>
-                </div>
-
-                <div>
-                    <div class="card" style="position: sticky; top: 40px;">
-                        <h3 class="card-title">🛒 Mi Carrito</h3>
-                        
-                        <div id="itemsCarrito" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; font-size: 14px; color: var(--text-muted);">
-                            El carrito está vacío.
-                        </div>
-
-                        <div style="border-top: 1px solid var(--border-color); padding-top: 15px; margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px;">
-                                <span>Total:</span>
-                                <span id="totalPedido" style="color: #b5aeff;">$0</span>
-                            </div>
-                        </div>
-
-                        <label for="metodoPago" style="color: var(--text-muted); font-size: 12px; font-weight: bold;">💳 MÉTODO DE PAGO:</label>
-                        <select id="metodoPago" class="select-dark">
-                            <option value="Efectivo">Efectivo al recibir</option>
-                            <option value="Nequi">Nequi</option>
-                            <option value="Daviplata">Daviplata</option>
-                            <option value="Tarjeta">Tarjeta de Crédito/Débito</option>
-                        </select>
-
-                        <button class="btn-action" style="width: 100%; text-align: center;" id="btnCheckout" onclick="realizarPedido()">
-                            Realizar Pedido 🚀
-                        </button>
+                    <div class="campo">
+                        <label>📧 CORREO ELECTRÓNICO</label>
+                        <p id="cuentaEmail">-</p>
+                    </div>
+                    <div class="campo">
+                        <label>📞 TELÉFONO</label>
+                        <p id="cuentaTelefono">-</p>
+                    </div>
+                    <div class="campo">
+                        <label>💳 MÉTODO DE PAGO PREFERIDO</label>
+                        <p id="cuentaMetodoPago">-</p>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
+    </div>
 
-        <section id="view-pedidos" class="view-section">
-            <div style="margin-bottom: 30px;">
-                <h2>📦 Historial de mis pedidos</h2>
-                <p style="color: var(--text-muted);">Rastrea el estado de tus solicitudes directo desde el servidor.</p>
+    <!-- Modal de estado del pedido -->
+    <div id="modalEstado" class="modal">
+        <div class="modal-content">
+            <div class="icono-moto">🛵</div>
+            <h3 id="modalPedidoId">Pedido #—</h3>
+            <div class="pasos" id="modalPasos">
+                <div class="paso" data-paso="recibido">📋 Recibido</div>
+                <div class="paso" data-paso="preparacion">🍳 Preparación</div>
+                <div class="paso" data-paso="camino">🛵 En camino</div>
+                <div class="paso" data-paso="entregado">✅ Entregado</div>
             </div>
-
-            <div class="card" style="padding: 0; overflow: hidden;">
-                <table class="tabla-historial" style="margin-top: 0;">
-                    <thead>
-                        <tr>
-                            <th>Pedido</th>
-                            <th>Total</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="listaHistorial">
-                        </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section id="view-perfil" class="view-section">
-            <h2>👤 Gestión de Cuenta</h2>
-            <p style="color: var(--text-muted);">Información del usuario autenticado en la plataforma.</p>
-            <div class="card" style="margin-top: 20px; max-width: 500px;">
-                <p><strong>Nombre completo:</strong> <span id="perfNombre">Cargando...</span></p>
-                <p><strong>Rol en Sistema:</strong> <span style="color: var(--primary-purple);">Cliente Consumidor</span></p>
-            </div>
-        </section>
-
-    </main>
+            <button class="close-modal" onclick="cerrarModal()">Cerrar</button>
+        </div>
+    </div>
 
     <script>
-        let carrito = [];
-
-        window.onload = function() {
-    // 1. CONTROL DE SESIÓN ESTRICTO
-    const idUsuario = localStorage.getItem('id_usuario');
-    const nombreUsuario = localStorage.getItem('nombre_usuario');
-    const rolUsuario = localStorage.getItem('rol_usuario') || 'Cliente Consumidor';
-
-    if (!idUsuario || !nombreUsuario) {
-        alert("Sesión no detectada o expirada. Por favor, inicie sesión formalmente.");
-        window.location.href = 'login.html'; 
-        return;
-    }
-
-    // 2. INYECCIÓN DE IDENTIDAD DINÁMICA
-    document.getElementById('nombreCliente').innerText = nombreUsuario;
-    document.getElementById('perfNombre').innerText = nombreUsuario;
+    let carrito = [];
+    let productosGlobal = [];
+    let idUsuario = null;
+    let intervaloEstado = null;
     
-    const contenedorPerfil = document.getElementById('view-perfil');
-    if (contenedorPerfil) {
-        const spans = contenedorPerfil.getElementsByTagName('span');
-        if (spans.length >= 2) spans[1].innerText = rolUsuario;
+    // Variables para búsqueda y filtros
+    let filtroActual = 'all';
+    let terminoBusqueda = '';
+
+    const mapaEstados = {
+        'Pendiente': ['recibido'],
+        'Preparacion': ['recibido', 'preparacion'],
+        'En camino': ['recibido', 'preparacion', 'camino'],
+        'Entregado': ['recibido', 'preparacion', 'camino', 'entregado']
+    };
+
+    // ==================== INICIALIZACIÓN ====================
+    window.onload = async function() {
+        idUsuario = localStorage.getItem('id_usuario');
+        const rol = localStorage.getItem('rol');
+        
+        if (!idUsuario || rol !== 'Cliente') {
+            mostrarToast("⚠️ Sesión no detectada. Por favor, inicie sesión.", true);
+            setTimeout(() => window.location.replace('login.html'), 2000);
+            return;
+        }
+        
+        const nombre = localStorage.getItem('nombre') || 'Cliente';
+        document.getElementById('userName').innerHTML = `👤 ${nombre}`;
+        
+        await cargarDatosUsuario();
+        await cargarCatalogo();
+        cargarCarritoLocal();
+        actualizarCarritoUI();
+        await cargarHistorialPedidos();
+        
+        // Configurar eventos de búsqueda
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            terminoBusqueda = e.target.value;
+            renderizarProductos();
+        });
+        
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            terminoBusqueda = document.getElementById('searchInput').value;
+            renderizarProductos();
+        });
+        
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                filtroActual = chip.dataset.filter;
+                renderizarProductos();
+            });
+        });
+        
+        await generarRecomendaciones();
+    };
+
+    // ==================== FUNCIONES DE BÚSQUEDA ====================
+    function filtrarProductos() {
+        let productosFiltrados = [...productosGlobal];
+        
+        // Filtrar por tipo de empresa
+        if (filtroActual !== 'all') {
+            productosFiltrados = productosFiltrados.filter(p => p.tipo_empresa === filtroActual);
+        }
+        
+        // Filtrar por término de búsqueda
+        if (terminoBusqueda.trim() !== '') {
+            const busquedaLower = terminoBusqueda.toLowerCase();
+            productosFiltrados = productosFiltrados.filter(p => 
+                p.nombre.toLowerCase().includes(busquedaLower) ||
+                (p.nombre_empresa && p.nombre_empresa.toLowerCase().includes(busquedaLower))
+            );
+        }
+        
+        // Ordenar: primero los que tienen stock
+        productosFiltrados.sort((a, b) => (b.stock > 0) - (a.stock > 0));
+        
+        return productosFiltrados;
     }
 
-    // 3. CARGA DE CATÁLOGO INICIAL
-    cargarProductosDesdeBD();
-    cargarHistorial();
-
-    // ─── OPTIMIZACIÓN PUNTO 4: CAPTURAR REDIRECCIÓN DESDE CONFIRMACIÓN ───
-    const urlParams = new URLSearchParams(window.location.search);
-    const vistaSolicitada = urlParams.get('vista');
-    if (vistaSolicitada === 'pedidos') {
-        // Buscamos el botón de la barra lateral de pedidos para activarlo visualmente
-        const itemMenuPedidos = document.querySelectorAll('.nav-menu .nav-item')[1]; 
-        cambiarSeccion('pedidos', itemMenuPedidos);
+    function renderizarProductos() {
+        const container = document.getElementById('productosContainer');
+        const productosFiltrados = filtrarProductos();
+        
+        if (productosFiltrados.length === 0) {
+            container.innerHTML = '<p style="color: #999; text-align: center;">🔍 No se encontraron productos. Intenta con otra búsqueda.</p>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="productos-grid">
+                ${productosFiltrados.map(p => `
+                    <div class="producto-card">
+                        <div class="producto-nombre">${escapeHtml(p.nombre)}</div>
+                        <div class="producto-empresa">🏪 ${escapeHtml(p.nombre_empresa || 'Empresa')}</div>
+                        <div class="producto-precio">$${parseFloat(p.precio).toLocaleString('es-CO')}</div>
+                        <div class="producto-stock">📦 Stock: ${p.stock} uds</div>
+                        <button class="btn-agregar" onclick="agregarAlCarrito(${p.id_producto})">+ Agregar</button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     }
-};
 
-        // ✔ SOLUCIÓN REINCORPORADA: Controlador de Intercambio de Pantallas (SPA UX)
-        function cambiarSeccion(seccionId, elementoMenu) {
-            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            
-            document.getElementById(`view-${seccionId}`).classList.add('active');
-            elementoMenu.classList.add('active');
-
-            if (seccionId === 'pedidos') {
-                cargarHistorial();
-            }
-        }
-
-        // --- CARGA DINÁMICA DE INVENTARIO DESDE EL BACKEND ---
-        async function cargarProductosDesdeBD() {
-            const cat = document.getElementById('catalogoProductos');
-            try {
-                const respuesta = await fetch('http://localhost:5000/api/productos/catalogo-cliente');
-                if (!respuesta.ok) throw new Error('Error al traer catálogo');
-                const productos = await respuesta.json();
-                
-                cat.innerHTML = '';
-                if (productos.length === 0) {
-                    cat.innerHTML = '<p style="color:var(--text-muted); padding:10px;">No hay productos en el inventario actual.</p>';
-                    return;
-                }
-
-                productos.forEach(prod => {
-                    cat.innerHTML += `
-                        <div class="producto-card">
-                            <div>
-                                <span style="font-size:11px; background:#2a2d4a; color:#b5aeff; padding:4px 8px; border-radius:6px;">🏪 ${prod.nombre_empresa}</span>
-                                <h4 style="margin:10px 0 5px 0; color:white;">${prod.nombre}</h4>
-                                <p style="color: #b5aeff; font-weight:700; margin:0 0 15px 0;">$${parseFloat(prod.precio).toLocaleString('es-CO')}</p>
-                            </div>
-                            <button class="btn-action" style="width:100%; font-size:12px;" onclick="agregarAlCarrito(${prod.id_producto}, '${prod.nombre.replace(/'/g, "\\'")}', ${prod.precio}, ${prod.id_empresa})">Agregar ➕</button>
-                        </div>
-                    `;
-                });
-            } catch (err) {
-                console.error(err);
-                cat.innerHTML = '<p style="color:var(--red-danger); padding:10px;">Error al sincronizar con el backend.</p>';
-            }
-        }
-
-        // --- GESTIÓN DINÁMICA DEL CARRITO ---
-        function agregarAlCarrito(id, nombre, precio, idEmpresa) {
-            if (carrito.length === 0) {
-                localStorage.setItem('id_empresa', idEmpresa);
-            } else {
-                const empresaActual = localStorage.getItem('id_empresa');
-                if (String(idEmpresa) !== String(empresaActual)) {
-                    alert("Solo puedes agregar productos de la misma empresa a tu orden.");
-                    return;
+    async function generarRecomendaciones() {
+        try {
+            const response = await fetch(`http://localhost:5000/api/recomendaciones/${idUsuario}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.recomendacion) {
+                    document.getElementById('recomendacionTexto').innerHTML = data.recomendacion;
+                    document.getElementById('recomendacionesContainer').style.display = 'block';
                 }
             }
+        } catch (error) {
+            console.log("Recomendaciones no disponibles");
+            document.getElementById('recomendacionesContainer').style.display = 'none';
+        }
+    }
 
-            carrito.push({ id_producto: id, nombre, precio, cantidad: 1 });
+    // ==================== FUNCIONES EXISTENTES ====================
+    async function cargarDatosUsuario() {
+        try {
+            const response = await fetch(`http://localhost:5000/api/usuarios/${idUsuario}`);
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('cuentaNombre').innerText = data.nombre || '-';
+                document.getElementById('cuentaEmail').innerText = data.email || '-';
+                document.getElementById('cuentaTelefono').innerText = data.telefono || '-';
+                document.getElementById('cuentaMetodoPago').innerText = data.metodo_pago || '-';
+            }
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+
+    async function cargarCatalogo() {
+        const container = document.getElementById('productosContainer');
+        container.innerHTML = '<div class="loading">🔄 Cargando productos...</div>';
+        
+        try {
+            const response = await fetch('http://localhost:5000/api/productos/catalogo-cliente');
+            if (!response.ok) throw new Error('Error al cargar productos');
             
-            const listaCarrito = document.getElementById('itemsCarrito');
-            if (carrito.length === 1) listaCarrito.innerHTML = '';
-            
-            listaCarrito.innerHTML += `
-                <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); color:white;">
-                    <span>${nombre}</span>
-                    <span style="color:#b5aeff; font-weight:bold;">$${parseFloat(precio).toLocaleString('es-CO')}</span>
+            productosGlobal = await response.json();
+            renderizarProductos();
+        } catch (error) {
+            container.innerHTML = '<p style="color: #ff4c4c; text-align: center;">❌ Error al cargar productos</p>';
+        }
+    }
+
+    function agregarAlCarrito(idProducto) {
+        const producto = productosGlobal.find(p => p.id_producto === idProducto);
+        if (!producto) return;
+        
+        if (producto.stock <= 0) {
+            mostrarToast("⚠️ Producto sin stock", true);
+            return;
+        }
+        
+        const itemExistente = carrito.find(item => item.id_producto === idProducto);
+        
+        if (itemExistente) {
+            if (itemExistente.cantidad + 1 > producto.stock) {
+                mostrarToast(`⚠️ Solo hay ${producto.stock} disponibles`, true);
+                return;
+            }
+            itemExistente.cantidad++;
+        } else {
+            carrito.push({
+                id_producto: producto.id_producto,
+                nombre: producto.nombre,
+                precio: parseFloat(producto.precio),
+                cantidad: 1,
+                id_empresa: producto.id_empresa
+            });
+        }
+        
+        guardarCarritoLocal();
+        actualizarCarritoUI();
+        mostrarToast(`✅ ${producto.nombre} agregado`);
+    }
+
+    function actualizarCarritoUI() {
+        const container = document.getElementById('carritoItems');
+        const totalSpan = document.getElementById('carritoTotal');
+        
+        if (carrito.length === 0) {
+            container.innerHTML = '<p style="color: #999; text-align: center;">El carrito está vacío.</p>';
+            totalSpan.innerText = '0';
+            return;
+        }
+        
+        let total = 0;
+        container.innerHTML = carrito.map(item => {
+            const subtotal = item.precio * item.cantidad;
+            total += subtotal;
+            return `
+                <div class="carrito-item">
+                    <div style="flex:1">
+                        <strong>${escapeHtml(item.nombre)}</strong><br>
+                        $${item.precio.toLocaleString('es-CO')} x ${item.cantidad}
+                    </div>
+                    <div style="text-align: right;">
+                        <strong>$${subtotal.toLocaleString('es-CO')}</strong><br>
+                        <button onclick="modificarCantidad(${item.id_producto}, -1)" style="background:none;border:none;cursor:pointer;color:#D9643A;">➖</button>
+                        <span>${item.cantidad}</span>
+                        <button onclick="modificarCantidad(${item.id_producto}, 1)" style="background:none;border:none;cursor:pointer;color:#5A8F4C;">➕</button>
+                        <button onclick="eliminarDelCarrito(${item.id_producto})" style="background:none;border:none;cursor:pointer;color:#D9643A;">🗑️</button>
+                    </div>
                 </div>
             `;
-            
-            const total = carrito.reduce((sum, item) => sum + parseFloat(item.precio), 0);
-            document.getElementById('totalPedido').innerText = `$${total.toLocaleString('es-CO')}`;
-            localStorage.setItem('totalFinal', `$${total.toLocaleString('es-CO')}`);
+        }).join('');
+        
+        totalSpan.innerText = total.toLocaleString('es-CO');
+    }
+
+    function modificarCantidad(idProducto, cambio) {
+        const item = carrito.find(i => i.id_producto === idProducto);
+        if (!item) return;
+        
+        const nuevaCantidad = item.cantidad + cambio;
+        const productoOriginal = productosGlobal.find(p => p.id_producto === idProducto);
+        
+        if (nuevaCantidad <= 0) {
+            eliminarDelCarrito(idProducto);
+        } else if (productoOriginal && nuevaCantidad > productoOriginal.stock) {
+            mostrarToast(`⚠️ Solo hay ${productoOriginal.stock} disponibles`, true);
+        } else {
+            item.cantidad = nuevaCantidad;
+            guardarCarritoLocal();
+            actualizarCarritoUI();
         }
+    }
 
-        // ✔ SOLUCIÓN REINCORPORADA: Procesar Pago alineado con confirmacion.html
-        function realizarPedido() {
-            if (carrito.length === 0) return alert("El carrito está vacío");
-            
-            localStorage.setItem('pedidoFinal', JSON.stringify(carrito));
-            localStorage.setItem('metodoPagoFinal', document.getElementById('metodoPago').value);
-            
-            window.location.href = 'confirmacion.html';
+    function eliminarDelCarrito(idProducto) {
+        carrito = carrito.filter(i => i.id_producto !== idProducto);
+        guardarCarritoLocal();
+        actualizarCarritoUI();
+        mostrarToast("🗑️ Producto eliminado");
+    }
+
+    async function realizarPedido() {
+        if (carrito.length === 0) {
+            mostrarToast("⚠️ El carrito está vacío", true);
+            return;
         }
-
-        // --- HISTORIAL DESDE LA BASE DE DATOS ---
-        async function cargarHistorial() {
-            const idUsuario = localStorage.getItem('id_usuario');
-            const listaHistorial = document.getElementById('listaHistorial');
+        
+        const empresasUnicas = [...new Set(carrito.map(item => item.id_empresa))];
+        if (empresasUnicas.length > 1) {
+            mostrarToast("⚠️ Solo puedes pedir productos de una misma empresa por pedido", true);
+            return;
+        }
+        
+        const btn = document.getElementById('btnRealizarPedido');
+        btn.disabled = true;
+        btn.innerText = "⏳ Procesando...";
+        
+        const metodoPago = document.getElementById('metodoPago').value;
+        
+        try {
+            const response = await fetch('http://localhost:5000/api/pedidos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id_usuario: parseInt(idUsuario),
+                    id_empresa: empresasUnicas[0],
+                    metodo_pago: metodoPago,
+                    productos: carrito.map(item => ({
+                        id_producto: item.id_producto,
+                        cantidad: item.cantidad,
+                        precio: item.precio
+                    }))
+                })
+            });
             
-            if (!idUsuario) return;
+            const data = await response.json();
+            
+            if (!response.ok) throw new Error(data.error || "Error al procesar");
+            
+            mostrarToast(`✅ ¡Pedido #${data.id_pedido} realizado! Total: $${data.total.toLocaleString('es-CO')}`);
+            
+            carrito = [];
+            guardarCarritoLocal();
+            actualizarCarritoUI();
+            await cargarCatalogo();
+            await cargarHistorialPedidos();
+            
+            cambiarTab('pedidos');
+            
+        } catch (error) {
+            mostrarToast(`❌ ${error.message}`, true);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "📦 Realizar Pedido";
+        }
+    }
 
-            try {
-                const res = await fetch(`http://localhost:5000/api/pedidos/usuario/${idUsuario}`);
-                if (!res.ok) throw new Error("Fallo en la red");
-                const pedidos = await res.json();
-                
-                listaHistorial.innerHTML = '';
-                if (pedidos.length === 0) {
-                    listaHistorial.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:20px;">No registras órdenes de compra aún.</td></tr>';
-                    return;
-                }
-
-                pedidos.forEach(p => {
-                    listaHistorial.innerHTML += `
-                        <tr>
-                            <td style="font-weight:bold; color:#b5aeff;">#${p.id_pedido}</td>
-                            <td>$${parseFloat(p.total).toLocaleString('es-CO')}</td>
-                            <td><span class="badge-estado">${p.estado}</span></td>
-                        </tr>
-                    `;
-                });
-            } catch (err) {
-                console.error("Error al cargar historial:", err);
-                listaHistorial.innerHTML = '<tr><td colspan="3" style="color:var(--red-danger); text-align:center; padding:14px;">Error al conectar con el servidor de datos.</td></tr>';
+    async function cargarHistorialPedidos() {
+        const container = document.getElementById('pedidosContainer');
+        container.innerHTML = '<div class="loading">🔄 Cargando tus pedidos...</div>';
+        
+        try {
+            const response = await fetch(`http://localhost:5000/api/pedidos/usuario/${idUsuario}`);
+            if (!response.ok) throw new Error('Error al cargar pedidos');
+            
+            const pedidos = await response.json();
+            
+            if (pedidos.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center;">📭 No has realizado ningún pedido aún</p>';
+                return;
             }
+            
+            container.innerHTML = pedidos.map(pedido => `
+                <div class="pedido-card" onclick="verEstadoPedido(${pedido.id_pedido}, '${pedido.estado}')">
+                    <div class="pedido-info">
+                        <div class="pedido-id">#${pedido.id_pedido}</div>
+                        <div class="pedido-fecha">📅 ${pedido.fecha ? new Date(pedido.fecha).toLocaleString() : 'Fecha no disponible'}</div>
+                    </div>
+                    <div class="pedido-estado estado-${pedido.estado.replace(/ /g, '\\ ')}">${pedido.estado}</div>
+                    <div class="pedido-total">$${parseFloat(pedido.total).toLocaleString('es-CO')}</div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            container.innerHTML = '<p style="color: #ff4c4c; text-align: center;">❌ Error al cargar tus pedidos</p>';
         }
+    }
 
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'login.html';
+    function verEstadoPedido(idPedido, estadoActual) {
+        document.getElementById('modalPedidoId').innerText = `Pedido #${idPedido}`;
+        
+        const pasosActivos = mapaEstados[estadoActual] || ['recibido'];
+        
+        document.querySelectorAll('#modalPasos .paso').forEach(paso => {
+            paso.classList.remove('activo', 'en-curso');
+        });
+        
+        pasosActivos.forEach((pasoId, index) => {
+            const pasoElement = document.querySelector(`#modalPasos .paso[data-paso="${pasoId}"]`);
+            if (pasoElement) {
+                if (index === pasosActivos.length - 1 && estadoActual !== 'Entregado') {
+                    pasoElement.classList.add('en-curso');
+                } else {
+                    pasoElement.classList.add('activo');
+                }
+            }
+        });
+        
+        document.getElementById('modalEstado').style.display = 'flex';
+        
+        if (intervaloEstado) clearInterval(intervaloEstado);
+        intervaloEstado = setInterval(() => actualizarEstadoPedido(idPedido), 5000);
+    }
+
+    async function actualizarEstadoPedido(idPedido) {
+        try {
+            const response = await fetch(`http://localhost:5000/api/pedidos/${idPedido}`);
+            const data = await response.json();
+            
+            if (data && data.estado) {
+                const pasosActivos = mapaEstados[data.estado] || ['recibido'];
+                
+                document.querySelectorAll('#modalPasos .paso').forEach(paso => {
+                    paso.classList.remove('activo', 'en-curso');
+                });
+                
+                pasosActivos.forEach((pasoId, index) => {
+                    const pasoElement = document.querySelector(`#modalPasos .paso[data-paso="${pasoId}"]`);
+                    if (pasoElement) {
+                        if (index === pasosActivos.length - 1 && data.estado !== 'Entregado') {
+                            pasoElement.classList.add('en-curso');
+                        } else {
+                            pasoElement.classList.add('activo');
+                        }
+                    }
+                });
+                
+                if (data.estado === 'Entregado' && intervaloEstado) {
+                    clearInterval(intervaloEstado);
+                    intervaloEstado = null;
+                }
+            }
+        } catch (error) {
+            console.error("Error:", error);
         }
+    }
+
+    function cerrarModal() {
+        document.getElementById('modalEstado').style.display = 'none';
+        if (intervaloEstado) {
+            clearInterval(intervaloEstado);
+            intervaloEstado = null;
+        }
+        cargarHistorialPedidos();
+    }
+
+    function cambiarTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        event.target.classList.add('active');
+        
+        if (tab === 'pedidos') cargarHistorialPedidos();
+        if (tab === 'cuenta') cargarDatosUsuario();
+    }
+
+    function guardarCarritoLocal() {
+        localStorage.setItem('carrito_cliente', JSON.stringify(carrito));
+    }
+
+    function cargarCarritoLocal() {
+        const guardado = localStorage.getItem('carrito_cliente');
+        if (guardado) {
+            try {
+                carrito = JSON.parse(guardado);
+            } catch(e) { carrito = []; }
+        }
+    }
+
+    function mostrarToast(mensaje, esError = false) {
+        const toast = document.createElement('div');
+        toast.className = `toast ${esError ? 'error' : ''}`;
+        toast.innerText = mensaje;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.replace('login.html');
+    }
     </script>
 </body>
 </html>

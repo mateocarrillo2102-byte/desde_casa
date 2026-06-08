@@ -3,9 +3,9 @@ import json
 import io
 import traceback
 from datetime import datetime
+import random
 
-# 🛡️ BLINDAJE DE CODIFICACIÓN: Forzar UTF-8 para evitar colapso en Windows
-# al procesar palabras como "Establecimiento", tildes o caracteres especiales.
+# Forzar UTF-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
 
@@ -33,7 +33,7 @@ def procesar_analitica_dashboard(datos):
                 try:
                     fecha_limpia = str(fecha_str).split("T")[0]
                     dt = datetime.strptime(fecha_limpia, "%Y-%m-%d")
-                    mes_nombre = dt.strftime("%b") 
+                    mes_nombre = dt.strftime("%b")
                     ventas_por_mes[mes_nombre] = ventas_por_mes.get(mes_nombre, 0.0) + total_pedido
                 except Exception:
                     pass
@@ -49,6 +49,7 @@ def procesar_analitica_dashboard(datos):
         labels_meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun']
         valores_meses = [0, 0, 0, 0, 0, 0]
 
+    # Calcular best seller
     conteo_productos = {}
     for dp in detalles_productos:
         prod_nombre = dp.get("nombre")
@@ -59,10 +60,7 @@ def procesar_analitica_dashboard(datos):
             conteo_productos[prod_nombre] = {"unidades": 0, "precio": prod_precio}
         conteo_productos[prod_nombre]["unidades"] += cantidad
 
-    best_seller_final = {"nombre": "Ninguno", "precio": 0, "unidades": 0}
-    # === REEMPLAZAR LA SECCIÓN DEL BEST SELLER EN analitica.py POR ESTO ===
     if conteo_productos:
-        # Si hay ventas, buscamos el que más unidades tiene
         producto_max = max(conteo_productos, key=lambda k: conteo_productos[k]["unidades"])
         best_seller_final = {
             "nombre": producto_max,
@@ -70,7 +68,6 @@ def procesar_analitica_dashboard(datos):
             "unidades": conteo_productos[producto_max]["unidades"]
         }
     else:
-        # Si la empresa es nueva o no hay ventas, enviamos datos en cero para no romper la interfaz
         best_seller_final = {
             "nombre": "Sin ventas registradas",
             "precio": 0.0,
@@ -80,10 +77,30 @@ def procesar_analitica_dashboard(datos):
     return {
         "nombre": nombre,
         "tipo": tipo,
-        "resumenFinanciero": { "revenueTotal": ingresos_brutos },
-        "graficoBarras": { "labels": labels_meses, "valores": valores_meses },
-        "graficoDona": { "completados": completados, "procesando": procesando, "cancelados": cancelados },
+        "resumenFinanciero": {"revenueTotal": ingresos_brutos},
+        "graficoBarras": {"labels": labels_meses, "valores": valores_meses},
+        "graficoDona": {"completados": completados, "procesando": procesando, "cancelados": cancelados},
         "bestSeller": best_seller_final
+    }
+
+def asignar_repartidor(datos):
+    domiciliarios = datos.get("domiciliarios", [])
+    id_pedido = datos.get("id_pedido")
+    
+    if not domiciliarios:
+        return {
+            "status": "fallido",
+            "mensaje": "No hay domiciliarios disponibles"
+        }
+    
+    # Asignar el primer disponible (o podrías usar un algoritmo más sofisticado)
+    asignado = domiciliarios[0]
+    
+    return {
+        "status": "exitoso",
+        "id_pedido": id_pedido,
+        "id_domiciliario": asignado["id_domiciliario"],
+        "nombre_domiciliario": asignado["nombre"]
     }
 
 if __name__ == "__main__":
@@ -96,12 +113,14 @@ if __name__ == "__main__":
 
             if tarea == "analitica_avanzada_dashboard":
                 resultado = procesar_analitica_dashboard(datos)
-                # La única salida limpia permitida
                 print(json.dumps(resultado))
+            elif tarea == "asignar_repartidor":
+                resultado = asignar_repartidor(datos)
+                print(json.dumps(resultado))
+            else:
+                print(json.dumps({"error": f"Tarea desconocida: {tarea}"}))
                 
     except Exception as e:
-        # 🛡️ CAPTURA INTELIGENTE: Empaquetamos el error como JSON para que Node
-        # lo procese sin provocar un "SyntaxError".
         error_dict = {
             "error_python": True,
             "mensaje": str(e),
