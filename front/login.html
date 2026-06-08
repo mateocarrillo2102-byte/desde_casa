@@ -53,19 +53,20 @@
                     alerta.style.color = "#28a745";
                     alerta.innerText = "¡Autenticación exitosa! Redirigiendo...";
 
-                    // CORRECCIÓN CRÍTICA: Se unifica el uso de 'data' en lugar de 'datos'
                     localStorage.clear(); // Limpia cualquier rastro corrupto anterior
                     
-                    localStorage.setItem('id_usuario', data.id);
+                    // Guardamos las variables compartidas
                     localStorage.setItem('nombre_usuario', data.nombre);
                     localStorage.setItem('rol_usuario', data.rol);
                     
                     console.log("Sesión iniciada correctamente para: ", data.nombre);
 
-                    // Redirección condicionada según el rol que devuelve el servidor
+                    // 📍 CORRECCIÓN CRÍTICA: Guardado condicional del ID según el rol
                     if (data.rol === 'Empresa') {
+                        localStorage.setItem('id_empresa', data.id);
                         window.location.href = 'login_empresa.html';
                     } else {
+                        localStorage.setItem('id_usuario', data.id);
                         window.location.href = 'login_cliente.html'; 
                     }
                     

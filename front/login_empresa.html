@@ -16,7 +16,12 @@
                 <span style="color: var(--text-muted); font-size: 14px;" id="lblTipoEmpresa">Establecimiento comercial</span>
             </div>
             <a href="gestion_productos.html" class="btn-action">📦 Gestionar Catálogo</a>
+            <button onclick="logout()" class="btn-action" style="background-color: #ff4c4c; border: none; cursor: pointer;">
+                🚪 Cerrar Sesión
+            </button>
+        </button>
         </div>
+        
 
         <div class="grid-layout">
             
@@ -26,7 +31,7 @@
                     <div class="revenue-sidebar">
                         <span style="color: var(--text-muted); font-size: 13px;">Total Revenue</span>
                         <div class="revenue-total" id="txtTotalRevenue">$0,00</div>
-                        <span style="color: var(--green-success); font-size: 12px;">📈 +16.3% este mes</span>
+                        <span id="txtCrecimiento" style="color: var(--text-muted); font-size: 12px;">Aún sin datos de ventas</span>
                     </div>
                     <div class="chart-wrapper">
                         <canvas id="chartBarras"></canvas>
@@ -201,6 +206,10 @@
                     plugins: { legend: { display: false } }
                 }
             });
+        }
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
         }
     </script>
 </body>

@@ -60,12 +60,21 @@ def procesar_analitica_dashboard(datos):
         conteo_productos[prod_nombre]["unidades"] += cantidad
 
     best_seller_final = {"nombre": "Ninguno", "precio": 0, "unidades": 0}
+    # === REEMPLAZAR LA SECCIÓN DEL BEST SELLER EN analitica.py POR ESTO ===
     if conteo_productos:
+        # Si hay ventas, buscamos el que más unidades tiene
         producto_max = max(conteo_productos, key=lambda k: conteo_productos[k]["unidades"])
         best_seller_final = {
             "nombre": producto_max,
             "precio": conteo_productos[producto_max]["precio"],
             "unidades": conteo_productos[producto_max]["unidades"]
+        }
+    else:
+        # Si la empresa es nueva o no hay ventas, enviamos datos en cero para no romper la interfaz
+        best_seller_final = {
+            "nombre": "Sin ventas registradas",
+            "precio": 0.0,
+            "unidades": 0
         }
 
     return {
