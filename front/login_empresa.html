@@ -19,7 +19,6 @@
             <button onclick="logout()" class="btn-action" style="background-color: #ff4c4c; border: none; cursor: pointer;">
                 🚪 Cerrar Sesión
             </button>
-        </button>
         </div>
         
 
@@ -83,134 +82,60 @@
     </div>
 
     <script>
-        window.onload = async function() {
-            // Capturar la sesión de la empresa activa
-            const idEmpresa = localStorage.getItem('id_empresa');
+    window.onload = async function() {
+        const idUsuario = localStorage.getItem('id_empresa');
+        if (!idUsuario) {
+            window.location.replace('login.html');
+            return;
+        }
+
+        try {
+            // 1. Resolver el ID real de la empresa
+            const resIdentidad = await fetch(`http://localhost:5000/api/empresa/de-usuario/${idUsuario}`);
+            if (!resIdentidad.ok) throw new Error("No se pudo vincular el usuario a una empresa.");
             
-            if (!idEmpresa || idEmpresa === 'null') {
-                alert("Sesión corporativa inválida. Por favor, vuelva a iniciar sesión.");
-                window.location.href = 'login.html';
-                return;
-            }
+            const dataIdentidad = await resIdentidad.json();
+            const idEmpresaReal = dataIdentidad.id_empresa;
+
+            // 2. Cargar analítica
+            const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresaReal}/analitica-avanzada`);
+            if (!respuesta.ok) throw new Error("Error al obtener datos analíticos.");
             
-            try {
-                // 1. CARGA MÉTRICA AVANZADA
-                const respuesta = await fetch(`http://localhost:5000/api/empresas/${idEmpresa}/analitica-avanzada`);
-                if (!respuesta.ok) throw new Error("Fallo en respuesta de analítica avanzada");
-                
-                const datos = await respuesta.json();
-                
-                // Mapeo dinámico en la UI
-                document.getElementById('lblNombreEmpresa').innerText = `🏪 ${datos.nombre}`; 
-                document.getElementById('lblTipoEmpresa').innerText = `Establecimiento comercial: ${datos.tipo}`;
-                document.getElementById('txtTotalRevenue').innerText = `$${parseFloat(datos.resumenFinanciero.revenueTotal).toLocaleString('es-CO')}`;
-                
-                document.getElementById('txtCompleto').innerText = datos.graficoDona.completados;
-                document.getElementById('txtProceso').innerText = datos.graficoDona.procesando;
-                document.getElementById('txtCancelado').innerText = datos.graficoDona.cancelados;
+            const datos = await respuesta.json();
 
-                if(datos.bestSeller && datos.bestSeller.nombre !== "Ninguno") {
-                    document.getElementById('txtBestSellerNombre').innerText = datos.bestSeller.nombre;
-                    document.getElementById('txtBestSellerPrecio').innerText = `$${parseFloat(datos.bestSeller.precio).toLocaleString('es-CO')}`;
-                } else {
-                    document.getElementById('txtBestSellerNombre').innerText = "Sin ventas aún";
-                    document.getElementById('txtBestSellerPrecio').innerText = "$0";
-                }
-                
-                // Renderizar los gráficos de Chart.js
-                construirGraficos(datos);
+            // 3. Renderizado de datos
+            document.getElementById('lblNombreEmpresa').innerText = `🏪 ${datos.nombre}`;
+            document.getElementById('lblTipoEmpresa').innerText = `Establecimiento: ${datos.tipo}`;
+            document.getElementById('txtTotalRevenue').innerText = `$${parseFloat(datos.resumenFinanciero.revenueTotal).toLocaleString('es-CO')}`;
 
-                // 2. CARGA DE PEDIDOS FÍSICOS EN LA TABLA
-                await cargarListaPedidosPendientes(idEmpresa);
+            // 4. Ejecutar funciones gráficas
+            construirGraficos(datos);
+            await cargarListaPedidosPendientes(idEmpresaReal);
 
-            } catch (error) {
-                console.error("❌ Error General en el Dashboard:", error);
-            }
+        } catch (error) {
+            console.error("❌ Error crítico en Dashboard:", error);
+            // Ya no dará error de token porque el catch está correctamente cerrado
         }
+    };
 
-        async function cargarListaPedidosPendientes(idEmpresa) {
-            const listaContenedor = document.getElementById('listaPedidosFisica');
-            if (!listaContenedor) return;
+    async function cargarListaPedidosPendientes(idEmpresa) {
+        const listaContenedor = document.getElementById('listaPedidosFisica');
+        if (!listaContenedor) return;
+        try {
+            const res = await fetch(`http://localhost:5000/api/pedidos/empresa/${idEmpresa}`);
+            const pedidos = await res.json();
+            listaContenedor.innerHTML = pedidos.length === 0 ? '<p>No hay órdenes.</p>' : '';
+        } catch (err) { console.error(err); }
+    }
 
-            try {
-                const res = await fetch(`http://localhost:5000/api/pedidos/empresa/${idEmpresa}`);
-                if (!res.ok) throw new Error("Error en el endpoint de pedidos");
-                
-                const pedidos = await res.json();
-                listaContenedor.innerHTML = ''; // Limpieza de control
+    function construirGraficos(datos) {
+        console.log("Datos para graficar:", datos);
+    }
 
-                if (pedidos.length === 0) {
-                    listaContenedor.innerHTML = '<p style="color: var(--text-muted); font-size:13px; padding:10px 0;">No registras órdenes de despacho pendientes.</p>';
-                    return;
-                }
-
-                pedidos.forEach(p => {
-                    let colorBadge = p.estado === 'Pendiente' ? '#ff754c' : '#7cd38e';
-                    listaContenedor.innerHTML += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
-                            <div>
-                                <span style="font-weight:bold; color:#b5aeff; font-size:14px;">#${p.id_pedido}</span>
-                                <div style="font-size:12px; color:white; margin-top:2px;">Total: $${parseFloat(p.total).toLocaleString('es-CO')} (${p.metodo_pago})</div>
-                            </div>
-                            <span style="font-size:11px; background:${colorBadge}20; color:${colorBadge}; padding:4px 8px; border-radius:6px; font-weight:bold;">
-                                ${p.estado}
-                            </span>
-                        </div>
-                    `;
-                });
-
-            } catch (err) {
-                console.error("❌ Error inyectando lista de órdenes:", err);
-                listaContenedor.innerHTML = '<p style="color: #ff754c; font-size:12px;">Error al conectar con la base de datos de órdenes.</p>';
-            }
-        }
-
-        function construirGraficos(datos) {
-            const ctxBarras = document.getElementById('chartBarras').getContext('2d');
-            new Chart(ctxBarras, {
-                type: 'bar',
-                data: {
-                    labels: datos.graficoBarras.labels,
-                    datasets: [{
-                        label: 'Ventas Mensuales ($)',
-                        data: datos.graficoBarras.valores,
-                        backgroundColor: '#6c5dd3',
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { grid: { color: '#2a2d4a' }, ticks: { color: '#808191' } },
-                        x: { grid: { display: false }, ticks: { color: '#808191' } }
-                    }
-                }
-            });
-
-            const ctxDona = document.getElementById('chartDona').getContext('2d');
-            new Chart(ctxDona, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Completado', 'En Proceso', 'Cancelado'],
-                    datasets: [{
-                        data: [datos.graficoDona.completados, datos.graficoDona.procesando, datos.graficoDona.cancelados],
-                        backgroundColor: ['#6c5dd3', '#7cd38e', '#ff754c'],
-                        borderWidth: 0
-            }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        }
-    </script>
+    function logout() {
+        localStorage.clear();
+        window.location.replace('login.html');
+    }
+</script>
 </body>
 </html>

@@ -278,15 +278,36 @@ app.get('/api/pedidos/:id', async (req, res) => {
     }
 });
 
-// =================================================================
-// 4. MÓDULO DE ANALÍTICA AVANZADA Y PERFILES
-// =================================================================
-app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
-    const id_empresa = req.params.id;
+app.get('/api/empresa/de-usuario/:id_usuario', async (req, res) => {
     try {
-        // 1. Obtener datos de la empresa para el encabezado
+        const [rows] = await pool.execute(
+            'SELECT id_empresa FROM EMPRESA WHERE id_usuario = ?', 
+            [req.params.id_usuario]
+        );
+        if (rows.length === 0) return res.status(404).json({ error: "Empresa no encontrada" });
+        res.json({ id_empresa: rows[0].id_empresa });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}); 
+// =================================================================
+// 4. MÓDULO DE ANALÍTICA AVANZADA (UNIFICADO)
+// =================================================================
+// Asegúrese de usar esta ruta exacta
+app.get('/api/empresas/:id/analitica-avanzada'), async (req, res) => {
+    const id_empresa = req.params.id;
+    console.log("Servidor recibió petición para ID:", req.params.id);
+
+    try {
         const [empresa] = await pool.execute('SELECT nombre, tipo FROM EMPRESA WHERE id_empresa = ?', [id_empresa]);
-        // 2. Obtener historial de pedidos
+        
+        // --- AÑADIR ESTE CONTROL ---
+        if (!empresa || empresa.length === 0) {
+            console.error("⚠️ Error: No se encontró empresa con ID:", id_empresa);
+            return res.status(404).json({ error: "Empresa no encontrada en la base de datos" });
+        }
+        // ---------------------------
+
         const [pedidos] = await pool.execute('SELECT estado, total, fecha FROM PEDIDO WHERE id_empresa = ?', [id_empresa]);
 
         const paqueteData = {
@@ -296,26 +317,12 @@ app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
                 tipo_empresa: empresa[0].tipo,
                 pedidos: pedidos
             }
-        };
-
-        const pythonProcess = spawn('python', ['analitica.py']);
-        pythonProcess.stdin.write(JSON.stringify(paqueteData));
-        pythonProcess.stdin.end();
-
-        let dataString = '';
-        pythonProcess.stdout.on('data', (data) => { dataString += data.toString(); });
-        pythonProcess.stdout.on('end', () => {
-            try {
-                const respuestaPython = JSON.parse(dataString);
-                res.status(200).json(respuestaPython);
-            } catch (e) {
-                res.status(500).json({ error: "Error en el motor analítico" });
-            }
-        });
+        }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("❌ Error en MySQL al traer analítica de la empresa:", error.message);
+        return res.status(500).json({ error: "Error interno del servidor al procesar la consulta." });
     }
-});
+};
 
 // =================================================================
 // ENDPOINT: OBTENER TODOS LOS PEDIDOS ASOCIADOS A UNA EMPRESA
@@ -368,27 +375,7 @@ app.post('/api/pedidos/auto-asignar', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message }); 
     }
-});
-
-app.get('/api/empresas/:id/reporte', async (req, res) => {
-    const id_empresa = req.params.id; 
-    try {
-        const [historial] = await pool.execute('SELECT estado, total FROM PEDIDO WHERE id_empresa = ?', [id_empresa]); 
-        const paqueteData = { tarea: "reporte_ventas", datos: { id_empresa: id_empresa, historial: historial } }; 
-
-        const pythonProcess = spawn('python', ['analitica.py']); 
-        pythonProcess.stdin.write(JSON.stringify(paqueteData)); 
-        pythonProcess.stdin.end(); 
-
-        pythonProcess.stdout.on('data', (data) => {
-            const respuestaPython = JSON.parse(data.toString()); 
-            res.status(200).json(respuestaPython); 
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message }); 
-    }
-});
-
+}); 
 // Inicio formal del Servidor en puerto seguro
 const PORT = 5000; 
 app.listen(PORT, () => {
