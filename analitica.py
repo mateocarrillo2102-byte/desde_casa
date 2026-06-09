@@ -82,27 +82,107 @@ def procesar_analitica_dashboard(datos):
         "graficoDona": {"completados": completados, "procesando": procesando, "cancelados": cancelados},
         "bestSeller": best_seller_final
     }
+# ==================== NUEVAS FUNCIONES PARA REPARTIDORES ====================
 
-def asignar_repartidor(datos):
-    domiciliarios = datos.get("domiciliarios", [])
-    id_pedido = datos.get("id_pedido")
+def obtener_pedidos_pendientes(datos):
+    """
+    Procesa y filtra pedidos pendientes para mostrar a repartidores
+    """
+    pedidos = datos.get("pedidos", [])
+    ubicacion_repartidor = datos.get("ubicacion", {"lat": 11.3789, "lng": -72.2425})
     
-    if not domiciliarios:
-        return {
-            "status": "fallido",
-            "mensaje": "No hay domiciliarios disponibles"
-        }
+    pendientes = []
+    for p in pedidos:
+        if p.get("estado") == "Pendiente" and not p.get("id_domiciliario"):
+            # Simular distancia basada en ID del pedido (para demostración)
+            distancia = (p.get("id_pedido", 1) % 8) + 1
+            tiempo_estimado = distancia * 5
+            
+            pendientes.append({
+                "id_pedido": p.get("id_pedido"),
+                "total": float(p.get("total") or 0),
+                "empresa_nombre": p.get("empresa_nombre", "Empresa"),
+                "distancia": distancia,
+                "tiempo_estimado": tiempo_estimado,
+                "recomendado": distancia <= 3  # Recomendar si está cerca
+            })
     
-    # Asignar el primer disponible (o podrías usar un algoritmo más sofisticado)
-    asignado = domiciliarios[0]
+    # Ordenar por distancia (más cercanos primero)
+    pendientes.sort(key=lambda x: x["distancia"])
     
     return {
-        "status": "exitoso",
-        "id_pedido": id_pedido,
-        "id_domiciliario": asignado["id_domiciliario"],
-        "nombre_domiciliario": asignado["nombre"]
+        "pedidos": pendientes,
+        "total_pendientes": len(pendientes),
+        "mejor_opcion": pendientes[0] if pendientes else None
     }
 
+
+def recomendar_mejor_ruta(datos):
+    """
+    Recomienda la mejor ruta para múltiples pedidos
+    """
+    pedidos_asignados = datos.get("pedidos_asignados", [])
+    
+    if not pedidos_asignados:
+        return {"mensaje": "No hay pedidos asignados", "ruta": []}
+    
+    # Ordenar por distancia simulada
+    pedidos_con_distancia = []
+    for p in pedidos_asignados:
+        distancia = (p.get("id_pedido", 1) % 10) + 1
+        pedidos_con_distancia.append({
+            "id_pedido": p.get("id_pedido"),
+            "empresa_nombre": p.get("empresa_nombre"),
+            "direccion": p.get("direccion", "Dirección no especificada"),
+            "distancia": distancia,
+            "orden": 0
+        })
+    
+    # Ordenar por distancia
+    pedidos_con_distancia.sort(key=lambda x: x["distancia"])
+    
+    # Asignar orden
+    for i, p in enumerate(pedidos_con_distancia, 1):
+        p["orden"] = i
+    
+    return {
+        "ruta_optimizada": pedidos_con_distancia,
+        "total_km": sum(p["distancia"] for p in pedidos_con_distancia),
+        "tiempo_estimado": sum(p["distancia"] for p in pedidos_con_distancia) * 5
+    }
+
+
+def calcular_ganancias_repartidor(datos):
+    """
+    Calcula ganancias de un repartidor
+    """
+    entregas = datos.get("entregas", [])
+    tarifa_base = datos.get("tarifa_base", 3000)
+    tarifa_km = datos.get("tarifa_km", 500)
+    
+    total_entregas = len(entregas)
+    total_ganancias = 0
+    detalle_entregas = []
+    
+    for entrega in entregas:
+        distancia = entrega.get("distancia", 3)
+        ganancia = tarifa_base + (distancia * tarifa_km)
+        total_ganancias += ganancia
+        
+        detalle_entregas.append({
+            "id_pedido": entrega.get("id_pedido"),
+            "distancia": distancia,
+            "ganancia": ganancia,
+            "fecha": entrega.get("fecha", datetime.now().strftime("%Y-%m-%d"))
+        })
+    
+    return {
+        "total_entregas": total_entregas,
+        "total_ganancias": total_ganancias,
+        "detalle": detalle_entregas,
+        "promedio_por_entrega": round(total_ganancias / total_entregas, 2) if total_entregas > 0 else 0
+    }
+    
 if __name__ == "__main__":
     try:
         input_data = sys.stdin.read()
@@ -114,9 +194,24 @@ if __name__ == "__main__":
             if tarea == "analitica_avanzada_dashboard":
                 resultado = procesar_analitica_dashboard(datos)
                 print(json.dumps(resultado))
+                
             elif tarea == "asignar_repartidor":
                 resultado = asignar_repartidor(datos)
                 print(json.dumps(resultado))
+            
+            # ===== NUEVAS TAREAS =====
+            elif tarea == "pedidos_pendientes":
+                resultado = obtener_pedidos_pendientes(datos)
+                print(json.dumps(resultado))
+                
+            elif tarea == "recomendar_ruta":
+                resultado = recomendar_mejor_ruta(datos)
+                print(json.dumps(resultado))
+                
+            elif tarea == "calcular_ganancias":
+                resultado = calcular_ganancias_repartidor(datos)
+                print(json.dumps(resultado))
+                
             else:
                 print(json.dumps({"error": f"Tarea desconocida: {tarea}"}))
                 

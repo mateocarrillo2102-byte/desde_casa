@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Domiciliario - DomiClick</title>
+    <link rel="stylesheet" href="css/reg_rep.css">
+</head>
+<body>
+    <div class="contenedor">
+        <h2>🛵 Ser Domiciliario</h2>
+        <div class="subtitle">Regístrate para empezar a entregar pedidos en Maicao</div>
+        
+        <form id="formDomiciliario">
+            <div class="grupo-formulario">
+                <label>📛 Nombre Completo</label>
+                <input type="text" id="domNombre" required placeholder="Ej. Juan Pérez">
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>📞 Teléfono</label>
+                <input type="tel" id="domTelefono" required placeholder="3001234567">
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>📧 Correo Electrónico</label>
+                <input type="email" id="domEmail" required placeholder="juan@ejemplo.com">
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>🛵 Tipo de Vehículo</label>
+                <select id="domVehiculo">
+                    <option value="Moto">🏍️ Moto</option>
+                    <option value="Bicicleta">🚲 Bicicleta</option>
+                    <option value="Carro">🚗 Carro</option>
+                </select>
+            </div>
+            
+            <div class="grupo-formulario">
+                <label>🔒 Contraseña</label>
+                <input type="password" id="domContrasena" required placeholder="Mínimo 6 caracteres">
+            </div>
+            
+            <button type="submit" class="btn">✅ Registrarme como Domiciliario</button>
+            <button type="button" class="btn btn-volver" onclick="window.location.href='index.html'">⬅ Volver al Inicio</button>
+        </form>
+        
+        <div id="resultado" class="resultado">Complete el formulario para registrarse</div>
+        
+        <div class="link-login">
+            ¿Ya tienes cuenta? <a href="login.html">Iniciar sesión</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('formDomiciliario').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const resultado = document.getElementById('resultado');
+            const contrasena = document.getElementById('domContrasena').value;
+            
+            if (contrasena.length < 6) {
+                resultado.className = "resultado error";
+                resultado.innerText = "❌ La contraseña debe tener al menos 6 caracteres";
+                return;
+            }
+            
+            const payload = {
+                nombre: document.getElementById('domNombre').value,
+                telefono: document.getElementById('domTelefono').value,
+                email: document.getElementById('domEmail').value,
+                tipo_vehiculo: document.getElementById('domVehiculo').value,
+                contrasena: contrasena
+            };
+            
+            resultado.className = "resultado";
+            resultado.innerText = "🔄 Registrando...";
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/domiciliarios/registro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultado.className = "resultado exito";
+                    resultado.innerText = `✅ ¡Registro exitoso! Bienvenido ${payload.nombre}. Redirigiendo al login...`;
+                    document.getElementById('formDomiciliario').reset();
+                    
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2500);
+                } else {
+                    resultado.className = "resultado error";
+                    resultado.innerText = `❌ ${data.error || "Error al registrar"}`;
+                }
+            } catch (error) {
+                resultado.className = "resultado error";
+                resultado.innerText = "❌ Error de conexión con el servidor";
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

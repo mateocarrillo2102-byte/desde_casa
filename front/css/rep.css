@@ -1,0 +1,145 @@
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FDF8F0 0%, #F5EDE0 100%);
+            padding: 20px;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #3D2B1F 0%, #4A3728 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .logo-text { font-size: 24px; font-weight: 800; color: white; }
+        .logo-text span { color: #F4A236; }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid #D9643A;
+            color: #D9643A;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .status-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .status-disponible { background: #D4EDDA; color: #5A8F4C; display: inline-block; padding: 10px 25px; border-radius: 40px; }
+        .status-ocupado { background: #F8D7DA; color: #D9643A; display: inline-block; padding: 10px 25px; border-radius: 40px; }
+        .btn-toggle {
+            background: #5A8F4C;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn {
+            padding: 10px 20px;
+            background: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .tab-btn.active { background: #D9643A; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .pedido-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btn-asignar, .btn-entregar {
+            background: #5A8F4C;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .btn-entregar { background: #F4A236; color: #3D2B1F; }
+        .no-pedidos { text-align: center; padding: 40px; background: white; border-radius: 15px; color: #9C8E7B; }
+        h2 { margin-bottom: 15px; color: #3D2B1F; }
+        /* Estilos básicos para pedidos */
+.pedido-card {
+    background: white;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #F4A236;
+}
+
+.btn-asignar {
+    background: #5A8F4C;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-entregar {
+    background: #F4A236;
+    color: #3D2B1F;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.no-pedidos {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 15px;
+    color: #9C8E7B;
+}
+
+.status-disponible {
+    background: #D4EDDA;
+    color: #5A8F4C;
+    padding: 10px 20px;
+    border-radius: 30px;
+    display: inline-block;
+}
+
+.status-ocupado {
+    background: #F8D7DA;
+    color: #D9643A;
+    padding: 10px 20px;
+    border-radius: 30px;
+    display: inline-block;
+}
+
+.btn-toggle {
+    background: #5A8F4C;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    margin-left: 10px;
+}

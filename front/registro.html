@@ -30,6 +30,10 @@
                 <input type="email" id="regEmail" required placeholder="correo@ejemplo.com">
             </div>
             <div class="grupo-formulario">
+                <label>📍 Dirección de Entrega:</label>
+                <input type="text" id="regDireccion" placeholder="Calle, número, barrio, referencia">
+            </div>
+            <div class="grupo-formulario">
                 <label>Contraseña de Acceso:</label>
                 <input type="password" id="regContrasena" required placeholder="••••••••">
             </div>
@@ -56,13 +60,13 @@
             try {
                 // CORRECCIÓN 1: Estructuramos el payload apuntando a los IDs correctos del HTML
                 const payload = {
-                    nombre: document.getElementById('regNombre').value,
-                    telefono: document.getElementById('regTelefono').value,
-                    email: document.getElementById('regEmail').value,
-                    contrasena: document.getElementById('regContrasena').value,
-                    // Corregido: Ahora apunta a 'regmetodoPago' que es el ID real del <select>
-                    metodo_pago: document.getElementById('regmetodoPago').value 
-                };
+    nombre: document.getElementById('regNombre').value,
+    telefono: document.getElementById('regTelefono').value,
+    email: document.getElementById('regEmail').value,
+    contrasena: document.getElementById('regContrasena').value,
+    metodo_pago: document.getElementById('regmetodoPago').value,
+    direccion: document.getElementById('regDireccion').value  // Nuevo campo
+};
 
                 // Imprimimos en la consola del navegador para certificar que el HTML empaquetó todo bien
                 console.log("📤 Enviando datos desde el formulario:", payload);

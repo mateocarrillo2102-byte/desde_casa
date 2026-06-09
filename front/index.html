@@ -1,215 +1,57 @@
-INDEX 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Módulo de Pedidos - Domicilios Maicao</title>
-    <link rel="stylesheet" href="css/estilo_rian.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DomiClick - Maicao</title>
+    <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
-
-    <nav class="nav-pruebas">
-
-    <a href="index.html">
-        <img src="img/logo.jpeg" alt="Logo DomiClick" class="logo-img">
-    </a>
-
-    <h1 class="logo-titulo">DomiClick</h1>
-    <p class="logo-subtitulo">Pide fácil, recibe rápido! </p>
-
-    <div class="nav-links-menu">
-    <a href="index.html">🏠 Inicio</a>
-    <a href="registro.html">👤 Registro</a>
-    <a href="registro-empresa.html"> 🏢 Registrar mi empresa</a>
-    <a href="login.html">🔐 Iniciar Sesión</a>
-</div>
-
-</nav>
-    <div class="contenedor">
-        <h2>Simulación de Compra y Procesamiento Híbrido</h2>
-        <p>Este formulario enviará los datos brutos a Node.js, quien calculará los costos con MySQL y ejecutará las operaciones con Python.</p>
-        
-        <div class="grupo-formulario">
-            <label>1. Seleccione la Empresa Local (Maicao):</label>
-            <select id="compraEmpresa">
-
-    <option>
-        Cargando empresas...
-    </option>
-
-</select>
+    <div class="hero">
+        <div class="logo">
+            <img src="img/logo.jpeg" alt="DomiClick" class="logo-img" onerror="this.style.display='none'">
+            <h1>Domi<span>Click</span></h1>
+            <div class="slogan">★ RÁPIDO, SEGURO Y CERCA DE TI ★</div>
         </div>
 
-        <h3>Carrito de Compras Provisional</h3>
-        <div id="listaProductos">
+        <div class="cards">
+            <!-- Tarjeta Cliente -->
+            <div class="card cliente">
+                <div class="card-icon">🛍️</div>
+                <h3>Cliente</h3>
+                <p>Realiza pedidos, explora el catálogo y recibe en tu domicilio</p>
+                <div class="card-buttons">
+                    <a href="login.html" class="btn-login">🔐 Iniciar Sesión</a>
+                    <a href="registro.html" class="btn-register">📝 Crear Cuenta</a>
+                </div>
+            </div>
 
-</div>
-            <div class="item-carrito">
-                <span>2x Producto de Prueba B</span>
-                <strong>$10,000.00 (c/u)</strong>
+            <!-- Tarjeta Empresa -->
+            <div class="card empresa">
+                <div class="card-icon">🏪</div>
+                <h3>Empresa</h3>
+                <p>Gestiona tu negocio, productos y pedidos en Maicao</p>
+                <div class="card-buttons">
+                    <a href="login.html" class="btn-login">🔐 Iniciar Sesión</a>
+                    <a href="registro-empresa.html" class="btn-register btn-register-empresa">📝 Registrar Mi Empresa</a>
+                </div>
+            </div>
+
+            <!-- Tarjeta Domiciliario -->
+            <div class="card domiciliario">
+                <div class="card-icon">🛵</div>
+                <h3>Domiciliario</h3>
+                <p>Regístrate y comienza a entregar pedidos en tu zona</p>
+                <div class="card-buttons">
+                    <a href="login.html" class="btn-login">🔐 Iniciar Sesión</a>
+                    <a href="registro-domiciliario.html" class="btn-register btn-register-domiciliario">📝 Ser Repartidor</a>
+                </div>
             </div>
         </div>
 
-        <div class="grupo-formulario" style="margin-top: 15px;">
-            <label>Método de Pago para la Entrega:</label>
-            <select id="compraMetodoPago">
-                <option value="Efectivo">Efectivo</option>
-                <option value="Transferencia">Transferencia Bancaria</option>
-            </select>
+        <div class="footer">
+            <p>© 2024 DomiClick - Maicao, La Guajira | 🏜️ Servicio rápido y seguro</p>
         </div>
-
-        <button onclick="enviarPedido()" class="btn btn-exito">1. Confirmar Compra (Node.js + MySQL)</button>
-        <button id="btnAutoAsignar" onclick="autoAsignarRepartidor()" class="btn" style="margin-top: 10px; background-color: #9b59b6;" disabled>2. Detonar Asignación Inteligente (Python)</button>
-        <button id="btnEstadisticas" onclick="obtenerReporte()" class="btn" style="margin-top: 10px; background-color: #e67e22;" disabled>3. Ver Reporte de Ventas (Python)</button>
-
-        <h3>Trazabilidad de Datos en Tiempo Real:</h3>
-        <div id="resultadoPedido" class="json-alerta">Seleccione una opción para probar el flujo de datos.</div>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-    cargarEmpresas();
-    cargarProductos();
-});
-
-let ultimoPedidoId = null;
-let empresaSeleccionadaId = null;
-
-async function cargarEmpresas() {
-
-    try {
-
-        const respuesta =
-            await fetch(
-                'http://localhost:5000/api/empresas'
-            );
-
-        const empresas =
-            await respuesta.json();
-
-        const select =
-            document.getElementById(
-                'compraEmpresa'
-            );
-
-        select.innerHTML = '';
-
-        empresas.forEach(empresa => {
-
-            select.innerHTML += `
-                <option value="${empresa.id_empresa}">
-                    ${empresa.nombre}
-                    - Envío $${empresa.tarifa_envio}
-                </option>
-            `;
-
-        });
-
-    }
-    catch(error) {
-
-        console.error(error);
-
-        document.getElementById(
-            'compraEmpresa'
-        ).innerHTML =
-        '<option>Error cargando empresas</option>';
-
-    }
-
-}
-
-        // Paso 1: Enviar el pedido inicial a la API de Node.js
-        async function enviarPedido() {
-            empresaSeleccionadaId = document.getElementById('compraEmpresa').value;
-            
-            const paquetePedido = {
-                id_usuario: 1, // Usuario de prueba previamente insertado
-                id_empresa: empresaSeleccionadaId,
-                metodo_pago: document.getElementById('compraMetodoPago').value,
-                productos: [
-                    { id_producto: 1, cantidad: 1, precio: 15000 },
-                    { id_producto: 2, cantidad: 2, precio: 10000 }
-                ]
-            };
-
-            try {
-                const respuesta = await fetch('http://localhost:5000/api/pedidos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(paquetePedido)
-                });
-                const data = await respuesta.json();
-                
-                document.getElementById('resultadoPedido').innerText = "RESPUESTA NODE.JS (MySQL):\n" + JSON.stringify(data, null, 2);
-                
-                if(data.id_pedido) {
-                    ultimoPedidoId = data.id_pedido;
-                    // Habilitar los botones de simulación analítica de Python
-                    document.getElementById('btnAutoAsignar').disabled = false;
-                    document.getElementById('btnEstadisticas').disabled = false;
-                }
-            } catch (error) {
-                document.getElementById('resultadoPedido').innerText = "Error: " + error.message;
-            }
-        }
-
-        // Paso 2: Invocar módulo de Asignación Inteligente de Python a través del Servidor
-        async function autoAsignarRepartidor() {
-            if(!ultimoPedidoId) return;
-            
-            try {
-                const respuesta = await fetch('http://localhost:5000/api/pedidos/auto-asignar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id_pedido: ultimoPedidoId })
-                });
-                const data = await respuesta.json();
-                document.getElementById('resultadoPedido').innerText = "RESPUESTA MOTOR ANALÍTICO (Python - Asignación):\n" + JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('resultadoPedido').innerText = "Error en Python: " + error.message;
-            }
-        }
-
-        // Paso 3: Invocar módulo estadístico de Python
-        async function obtenerReporte() {
-            if(!empresaSeleccionadaId) return;
-
-            try {
-                const respuesta = await fetch(`http://localhost:5000/api/empresas/${empresaSeleccionadaId}/reporte`);
-                const data = await respuesta.json();
-                document.getElementById('resultadoPedido').innerText = "RESPUESTA MOTOR ANALÍTICO (Python - Reportes):\n" + JSON.stringify(data, null, 2);
-            } catch (error) {
-                document.getElementById('resultadoPedido').innerText = "Error en módulo estadístico: " + error.message;
-            }
-        }
-
-  async function cargarProductos(){
-    try {
-        const respuesta = await fetch('http://localhost:5000/api/productos');
-        const productos = await respuesta.json();
-        let html = '';
-
-        productos.forEach(producto => {
-            html += `
-                <div class="item-carrito">
-                    <span>
-                        🏪 ${producto.empresa || 'Establecimiento'}<br>
-                        📦 ${producto.nombre}
-                    </span>
-                    <strong>
-                        $${producto.precio}
-                    </strong>
-                </div>
-            `;
-        });
-
-        document.getElementById('listaProductos').innerHTML = html;
-    } catch(error) {
-        console.error("Error cargando productos:", error);
-    }
-}
-    </script>
-    
 </body>
 </html>

@@ -1,13 +1,318 @@
-LOGIN REPARTIDOR <!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="es">
 <head>
-    <title>Panel Repartidor</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DomiClick - Dashboard Repartidor</title>
+    <link rel="stylesheet" href="css/rep.css">
 </head>
 <body>
+    <div class="navbar">
+        <div class="logo-text">Domi<span>Click</span></div>
+        <div><span id="userName">Repartidor</span> <button class="btn-logout" onclick="logout()">🚪 Salir</button></div>
+    </div>
 
-<h1>🏍️ Panel Repartidor</h1>
+    <div class="container">
+        <div class="status-card">
+            <div id="statusDisplay" class="status-disponible">🟢 Disponible</div>
+            <button class="btn-toggle" id="toggleBtn" onclick="toggleEstado()">🔴 Marcar Ocupado</button>
+        </div>
 
-<p>Bienvenido domiciliario.</p>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="cambiarTab('pendientes')">📋 Pendientes</button>
+            <button class="tab-btn" onclick="cambiarTab('activos')">🛵 Mis Entregas</button>
+            <button class="tab-btn" onclick="cambiarTab('completados')">✅ Historial</button>
+        </div>
 
+        <div id="tab-pendientes" class="tab-content active">
+            <h2>📋 Pedidos Pendientes</h2>
+            <div id="pendientesContainer">Cargando...</div>
+        </div>
+
+        <div id="tab-activos" class="tab-content">
+            <h2>🛵 Mis Entregas</h2>
+            <div id="activosContainer">Cargando...</div>
+        </div>
+
+        <div id="tab-completados" class="tab-content">
+            <h2>✅ Historial</h2>
+            <div id="completadosContainer">Cargando...</div>
+        </div>
+    </div>
+
+    <script>
+    let idDomiciliario = null;
+    let estadoActual = 'Disponible';
+
+    window.onload = async function() {
+        idDomiciliario = localStorage.getItem('id_domiciliario');
+        const nombre = localStorage.getItem('nombre');
+        
+        console.log("=== INICIANDO DASHBOARD REPARTIDOR ===");
+        console.log("ID Repartidor:", idDomiciliario);
+        console.log("Nombre:", nombre);
+        
+        if (!idDomiciliario) {
+            alert("No hay sesión de repartidor");
+            window.location.replace('login.html');
+            return;
+        }
+        
+        document.getElementById('userName').innerText = nombre || 'Repartidor';
+        
+        await cargarEstado();
+        await cargarPendientes();
+        await cargarActivos();
+        await cargarHistorial();
+        
+        // Actualizar cada 10 segundos
+        setInterval(async () => {
+            await cargarPendientes();
+            await cargarActivos();
+        }, 10000);
+    };
+    
+    function cambiarTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        event.target.classList.add('active');
+    }
+    
+    async function cargarEstado() {
+        try {
+            const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/estado`);
+            const data = await res.json();
+            console.log("Estado recibido:", data);
+            estadoActual = data.estado;
+            
+            const statusDiv = document.getElementById('statusDisplay');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            if (estadoActual === 'Disponible') {
+                statusDiv.className = 'status-disponible';
+                statusDiv.innerHTML = '🟢 Disponible';
+                toggleBtn.innerHTML = '🔴 Marcar Ocupado';
+            } else {
+                statusDiv.className = 'status-ocupado';
+                statusDiv.innerHTML = '🔴 Ocupado';
+                toggleBtn.innerHTML = '🟢 Marcar Disponible';
+            }
+        } catch (error) {
+            console.error("Error cargando estado:", error);
+        }
+    }
+    
+    async function toggleEstado() {
+        const nuevoEstado = estadoActual === 'Disponible' ? 'Ocupado' : 'Disponible';
+        try {
+            const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+            if (res.ok) {
+                estadoActual = nuevoEstado;
+                await cargarEstado();
+                await cargarPendientes();
+            } else {
+                const error = await res.json();
+                alert("Error: " + error.error);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Error de conexión");
+        }
+    }
+    
+    async function cargarPendientes() {
+        const container = document.getElementById('pendientesContainer');
+        container.innerHTML = '<div class="no-pedidos">🔄 Cargando pedidos pendientes...</div>';
+        
+        try {
+            console.log("📡 Consultando /api/pedidos/pendientes...");
+            const res = await fetch('http://localhost:5000/api/pedidos/pendientes');
+            
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            
+            const data = await res.json();
+            console.log("📦 Datos recibidos (pendientes):", data);
+            console.log("📦 Cantidad de pedidos:", data.length);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="no-pedidos">📭 No hay pedidos pendientes</div>';
+                return;
+            }
+            
+            container.innerHTML = data.map(p => `
+                <div class="pedido-card">
+                    <div>
+                        <strong>Pedido #${p.id_pedido}</strong><br>
+                        🏪 ${p.empresa_nombre || 'Empresa'}<br>
+                        📍 ${p.direccion_entrega || 'Sin dirección'}<br>
+                        💰 Total: $${(p.total || 0).toLocaleString()}
+                    </div>
+                    <div>
+                        ${estadoActual === 'Disponible' ? 
+                            `<button class="btn-asignar" onclick="asignarPedido(${p.id_pedido})">🛵 Tomar Pedido</button>` : 
+                            '<button disabled style="background:#ccc; padding:10px; border-radius:8px;">🔴 Ocupado</button>'}
+                    </div>
+                </div>
+            `).join('');
+            
+            console.log("✅ Pendientes renderizados correctamente");
+            
+        } catch (error) {
+            console.error("❌ Error en cargarPendientes:", error);
+            container.innerHTML = `<div class="no-pedidos">❌ Error al cargar: ${error.message}</div>`;
+        }
+    }
+    
+    async function cargarActivos() {
+        const container = document.getElementById('activosContainer');
+        container.innerHTML = '<div class="no-pedidos">🔄 Cargando tus entregas...</div>';
+        
+        try {
+            console.log(`📡 Consultando /api/domiciliarios/${idDomiciliario}/pedidos-activos...`);
+            const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/pedidos-activos`);
+            
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            
+            const data = await res.json();
+            console.log("📦 Datos recibidos (activos):", data);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="no-pedidos">📭 No tienes entregas activas</div>';
+                return;
+            }
+            
+            container.innerHTML = data.map(p => `
+                <div class="pedido-card">
+                    <div>
+                        <strong>Pedido #${p.id_pedido}</strong><br>
+                        🏪 ${p.empresa_nombre}<br>
+                        👤 Cliente: ${p.cliente_nombre || 'N/A'}<br>
+                        📞 Tel: ${p.cliente_telefono || 'N/A'}<br>
+                        📍 ${p.cliente_direccion || 'Sin dirección'}<br>
+                        🚚 Estado: ${p.estado}
+                    </div>
+                    <div>
+                        <strong>$${(p.total || 0).toLocaleString()}</strong><br>
+                        <button class="btn-entregar" onclick="entregarPedido(${p.id_pedido})">✅ Marcar Entregado</button>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error("❌ Error en cargarActivos:", error);
+            container.innerHTML = `<div class="no-pedidos">❌ Error al cargar: ${error.message}</div>`;
+        }
+    }
+    
+    async function cargarHistorial() {
+        const container = document.getElementById('completadosContainer');
+        container.innerHTML = '<div class="no-pedidos">🔄 Cargando historial...</div>';
+        
+        try {
+            console.log(`📡 Consultando /api/domiciliarios/${idDomiciliario}/historial...`);
+            const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/historial`);
+            
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            
+            const data = await res.json();
+            console.log("📦 Datos recibidos (historial):", data);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="no-pedidos">📭 No hay pedidos completados</div>';
+                return;
+            }
+            
+            container.innerHTML = data.map(p => `
+                <div class="pedido-card">
+                    <div>
+                        <strong>Pedido #${p.id_pedido}</strong><br>
+                        🏪 ${p.empresa_nombre}<br>
+                        📅 ${new Date(p.fecha).toLocaleDateString()}
+                    </div>
+                    <div>
+                        <strong>$${(p.total || 0).toLocaleString()}</strong>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error("❌ Error en cargarHistorial:", error);
+            container.innerHTML = `<div class="no-pedidos">❌ Error al cargar: ${error.message}</div>`;
+        }
+    }
+    
+    async function asignarPedido(idPedido) {
+        console.log(`🛵 Intentando asignar pedido ${idPedido} al repartidor ${idDomiciliario}`);
+        
+        try {
+            const res = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/asignar`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_domiciliario: idDomiciliario })
+            });
+            
+            const data = await res.json();
+            console.log("Respuesta asignación:", data);
+            
+            if (res.ok) {
+                alert(`✅ Pedido #${idPedido} asignado a ti!`);
+                await cargarPendientes();
+                await cargarActivos();
+                await cargarEstado();
+                cambiarTab('activos');
+            } else {
+                alert(`❌ ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("❌ Error de conexión");
+        }
+    }
+    
+    async function entregarPedido(idPedido) {
+        if (!confirm(`¿Confirmas que entregaste el pedido #${idPedido}?`)) return;
+        
+        console.log(`✅ Marcando pedido ${idPedido} como entregado`);
+        
+        try {
+            const res = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/entregar`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            const data = await res.json();
+            console.log("Respuesta entrega:", data);
+            
+            if (res.ok) {
+                alert(`✅ Pedido #${idPedido} entregado!`);
+                await cargarActivos();
+                await cargarHistorial();
+                await cargarEstado();
+                await cargarPendientes();
+            } else {
+                alert(`❌ ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("❌ Error de conexión");
+        }
+    }
+    
+    function logout() {
+        localStorage.clear();
+        window.location.replace('index.html');
+    }
+</script>
 </body>
 </html>

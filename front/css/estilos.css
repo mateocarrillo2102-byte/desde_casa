@@ -1,99 +1,239 @@
-/* Estilos globales para la plataforma de Gestión de Domicilios Maicao */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f4f6f9;
-    color: #333;
+/* ============================================
+   ESTILOS GENERALES - DOMICLICK MAICAO
+   Para formularios y páginas de registro
+   ============================================ */
+
+:root {
+    --desert-sand: #E8D5B5;
+    --desert-terracota: #D9643A;
+    --desert-cactus: #5A8F4C;
+    --desert-sun: #F4A236;
+    --desert-sunset: #C25D3A;
+    --desert-dark: #3D2B1F;
+    --desert-stone: #9C8E7B;
+    --desert-cream: #FFF5E6;
+    --bg-light: #FDF8F0;
+    --text-dark: #2C2418;
+    --text-muted: #8B7A66;
+    --success: #5A8F4C;
+    --warning: #F4A236;
+    --danger: #D9643A;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+* {
     margin: 0;
-    padding: 20px;
-}
-
-h1, h2, h3 {
-    color: #2c3e50;
-}
-
-/* Contenedor principal de tarjetas */
-.contenedor {
-    max-width: 600px;
-    background: #ffffff;
-    margin: 20px auto;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Formularios estructurados */
-.grupo-formulario {
-    margin-bottom: 15px;
-}
-
-.grupo-formulario label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-}
-
-.grupo-formulario input, .grupo-formulario select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 0;
     box-sizing: border-box;
 }
 
-/* Botones interactivos */
-.btn {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    font-size: 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    width: 100%;
-    font-weight: bold;
-    transition: background 0.3s ease;
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--bg-light) 0%, #F5EDE0 100%);
+    min-height: 100vh;
+    padding: 40px 20px;
 }
 
-.btn:hover {
-    background-color: #2980b9;
-}
-
-.btn-exito {
-    background-color: #2ecc71;
-}
-
-.btn-exito:hover {
-    background-color: #27ae60;
-}
-
-/* Alertas de Respuesta del Servidor */
-.json-alerta {
-    background-color: #e8f4f8;
-    border-left: 5px solid #3498db;
-    padding: 10px;
-    margin-top: 15px;
-    font-family: monospace;
-    white-space: pre-wrap;
-    font-size: 13px;
-}
-
-/* Lista de productos en el carrito */
-.item-carrito {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid #eee;
-}
-
-/* Menú de navegación de prueba */
+/* Navegación */
 .nav-pruebas {
-    text-align: center;
+    background: linear-gradient(135deg, var(--desert-dark) 0%, #4A3728 100%);
+    padding: 15px 30px;
+    border-radius: 15px;
     margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-md);
 }
 
 .nav-pruebas a {
-    margin: 0 10px;
-    color: #3498db;
+    color: white;
     text-decoration: none;
-    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.nav-pruebas a:hover {
+    background: rgba(244, 162, 54, 0.2);
+    color: var(--desert-sun);
+}
+
+/* Logo en navegación */
+.logo-img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 10px;
+}
+
+.logo-titulo {
+    color: white;
+    font-size: 24px;
+    margin: 0;
+}
+
+.logo-subtitulo {
+    color: var(--desert-stone);
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Contenedor principal */
+.contenedor {
+    max-width: 600px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 24px;
+    padding: 35px;
+    box-shadow: var(--shadow-lg);
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+h2 {
+    color: var(--desert-dark);
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 26px;
+}
+
+h3 {
+    color: var(--desert-dark);
+    margin: 20px 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--desert-sun);
+}
+
+p {
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 14px;
+}
+
+/* Formulario */
+.grupo-formulario {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--desert-dark);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--desert-sand);
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.3s;
+    background: white;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--desert-sun);
+    box-shadow: 0 0 0 3px rgba(244, 162, 54, 0.2);
+}
+
+/* Botones */
+.btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--desert-terracota);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn:hover {
+    background: var(--desert-sunset);
+    transform: translateY(-2px);
+}
+
+.btn-exito {
+    background: var(--desert-cactus);
+}
+
+.btn-exito:hover {
+    background: #4A7A3D;
+}
+
+/* Alerta / Resultado */
+.json-alerta {
+    background: var(--bg-light);
+    border-left: 4px solid var(--desert-sun);
+    padding: 15px;
+    border-radius: 12px;
+    margin-top: 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--desert-dark);
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* Mensajes de error/éxito */
+.alerta-info {
+    background: var(--desert-cream);
+    border-left: 4px solid var(--desert-sun);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.alerta-exito {
+    background: #D4EDDA;
+    border-left-color: var(--desert-cactus);
+    color: var(--desert-cactus);
+}
+
+.alerta-error {
+    background: #F8D7DA;
+    border-left-color: var(--danger);
+    color: var(--danger);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .contenedor {
+        padding: 25px;
+    }
+    
+    h2 {
+        font-size: 22px;
+    }
+    
+    .nav-pruebas {
+        flex-direction: column;
+        text-align: center;
+    }
 }

@@ -57,7 +57,7 @@ function ejecutarPython(datos) {
     });
 }
 
-// ==================== REGISTRO DE EMPRESA (CON USUARIO) - CORREGIDO ====================
+// ==================== REGISTRO DE EMPRESA ====================
 app.post('/api/empresa/registro', async (req, res) => {
     console.log("📥 Registro de empresa - Datos recibidos:", req.body);
     
@@ -72,21 +72,15 @@ app.post('/api/empresa/registro', async (req, res) => {
         conexion = await pool.getConnection();
         await conexion.beginTransaction();
         
-        // 1. Verificar si el email ya está registrado en USUARIO
-        const [existeUsuario] = await conexion.execute(
-            'SELECT id_usuario FROM USUARIO WHERE email = ?', 
-            [email]
-        );
+        const [existeUsuario] = await conexion.execute('SELECT id_usuario FROM USUARIO WHERE email = ?', [email]);
         
         if (existeUsuario.length > 0) {
             await conexion.rollback();
             return res.status(400).json({ error: "Este correo ya está registrado" });
         }
         
-        // 2. Encriptar contraseña
         const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
         
-        // 3. Insertar en USUARIO (credenciales + rol Empresa)
         const [resultadoUsuario] = await conexion.execute(
             `INSERT INTO USUARIO (nombre, email, contraseña, rol, telefono, metodo_pago) 
              VALUES (?, ?, ?, 'Empresa', ?, 'Efectivo')`,
@@ -96,7 +90,6 @@ app.post('/api/empresa/registro', async (req, res) => {
         const id_usuario = resultadoUsuario.insertId;
         console.log(`✅ Usuario creado con ID: ${id_usuario}`);
         
-        // 4. Insertar en EMPRESA (datos comerciales + FK id_usuario) - SIN columna email
         const [resultadoEmpresa] = await conexion.execute(
             `INSERT INTO EMPRESA (nombre, direccion, telefono, tipo, tarifa_envio, id_usuario) 
              VALUES (?, ?, ?, ?, ?, ?)`,
@@ -105,7 +98,6 @@ app.post('/api/empresa/registro', async (req, res) => {
         
         console.log(`✅ Empresa creada con ID: ${resultadoEmpresa.insertId}`);
         
-        // 5. Confirmar transacción
         await conexion.commit();
         
         return res.status(201).json({ 
@@ -255,12 +247,12 @@ app.post('/api/auth/login', async (req, res) => {
 // ==================== REGISTRO DE USUARIO CLIENTE ====================
 app.post('/api/usuarios', async (req, res) => {
     try {
-        const { nombre, telefono, email, contrasena, metodo_pago, rol } = req.body;
+        const { nombre, telefono, email, contrasena, metodo_pago, direccion, rol } = req.body;
         if (!contrasena) return res.status(400).json({ error: "La contraseña es obligatoria" });
 
         const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
-        const query = `INSERT INTO usuario (nombre, telefono, email, contraseña, metodo_pago, rol) VALUES (?, ?, ?, ?, ?, ?)`;
-        const [resultado] = await pool.execute(query, [nombre, telefono, email, contrasenaEncriptada, metodo_pago, rol || 'Cliente']);
+        const query = `INSERT INTO usuario (nombre, telefono, email, contraseña, metodo_pago, direccion, rol) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        const [resultado] = await pool.execute(query, [nombre, telefono, email, contrasenaEncriptada, metodo_pago, direccion || 'Dirección no registrada', rol || 'Cliente']);
 
         return res.status(201).json({ mensaje: 'Usuario registrado con éxito', id_usuario: resultado.insertId });
     } catch (error) {
@@ -423,7 +415,46 @@ app.post('/api/productos', async (req, res) => {
     }
 });
 
-// ==================== ENDPOINTS DE PEDIDOS ====================
+// ==================== ENDPOINTS DE PEDIDOS (ORDEN CORRECTO) ====================
+
+// PRIMERO: rutas ESPECÍFICAS (sin parámetros variables)
+app.get('/api/pedidos/pendientes', async (req, res) => {
+    console.log("📋 [PENDIENTES] Consultando pedidos pendientes...");
+    try {
+        const [pedidos] = await pool.execute(`
+            SELECT p.id_pedido, p.total, e.nombre as empresa_nombre, 
+                   COALESCE(u.direccion, 'Dirección no registrada') as direccion_entrega
+            FROM PEDIDO p
+            INNER JOIN EMPRESA e ON p.id_empresa = e.id_empresa
+            LEFT JOIN USUARIO u ON p.id_usuario = u.id_usuario
+            WHERE p.estado = 'Pendiente' AND (p.id_domiciliario IS NULL OR p.id_domiciliario = 0)
+            ORDER BY p.id_pedido ASC
+        `);
+        console.log(`✅ ${pedidos.length} pedidos pendientes encontrados`);
+        res.json(pedidos);
+    } catch (error) {
+        console.error("❌ Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/pedidos', async (req, res) => {
+    try {
+        const [pedidos] = await pool.execute(`
+            SELECT p.id_pedido, p.total, p.estado, p.fecha, u.nombre as cliente_nombre, e.nombre as empresa_nombre
+            FROM PEDIDO p
+            INNER JOIN USUARIO u ON p.id_usuario = u.id_usuario
+            INNER JOIN EMPRESA e ON p.id_empresa = e.id_empresa
+            ORDER BY p.id_pedido DESC
+        `);
+        res.json(pedidos);
+    } catch (error) {
+        console.error("❌ Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// SEGUNDO: rutas con parámetros específicos
 app.get('/api/pedidos/usuario/:id', async (req, res) => {
     try {
         const idUsuario = req.params.id;
@@ -438,6 +469,45 @@ app.get('/api/pedidos/usuario/:id', async (req, res) => {
     } catch (error) {
         console.error("❌ Error:", error.message);
         return res.status(500).json({ error: "Error al obtener el historial" });
+    }
+});
+
+app.get('/api/pedidos/empresa/:id', async (req, res) => {
+    const idEmpresa = req.params.id;
+    console.log(`📥 Consultando pedidos para empresa ID: ${idEmpresa}`);
+
+    try {
+        const [rows] = await pool.execute(
+            'SELECT id_pedido, total, estado, metodo_pago, fecha FROM PEDIDO WHERE id_empresa = ? ORDER BY id_pedido DESC',
+            [idEmpresa]
+        );
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error("❌ Error:", error.message);
+        return res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+// TERCERO: rutas con parámetro :id (esta debe ir DESPUÉS de las específicas)
+app.get('/api/pedidos/:id', async (req, res) => {
+    try {
+        const idPedido = req.params.id;
+        
+        // Evitar que "pendientes" sea interpretado como ID
+        if (idPedido === 'pendientes' || idPedido === 'usuario' || idPedido === 'empresa') {
+            return res.status(404).json({ error: "Ruta no válida" });
+        }
+        
+        const [rows] = await pool.execute('SELECT id_pedido, estado, total FROM PEDIDO WHERE id_pedido = ?', [idPedido]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Pedido no encontrado" });
+        }
+
+        return res.status(200).json(rows[0]);
+    } catch (error) {
+        console.error("❌ Error:", error.message);
+        return res.status(500).json({ error: error.message });
     }
 });
 
@@ -484,39 +554,42 @@ app.post('/api/pedidos', async (req, res) => {
     }
 });
 
-app.get('/api/pedidos/:id', async (req, res) => {
+app.put('/api/pedidos/:id/estado', async (req, res) => {
+    const id_pedido = req.params.id;
+    const { estado } = req.body;
+    
+    const estadosValidos = ['Pendiente', 'Preparacion', 'En camino', 'Entregado', 'Cancelado'];
+    
+    if (!estadosValidos.includes(estado)) {
+        return res.status(400).json({ error: "Estado no válido" });
+    }
+    
     try {
-        const idPedido = req.params.id;
-        const [rows] = await pool.execute('SELECT id_pedido, estado, total FROM PEDIDO WHERE id_pedido = ?', [idPedido]);
-
-        if (rows.length === 0) {
+        const [resultado] = await pool.execute(
+            'UPDATE PEDIDO SET estado = ? WHERE id_pedido = ?',
+            [estado, id_pedido]
+        );
+        
+        if (resultado.affectedRows === 0) {
             return res.status(404).json({ error: "Pedido no encontrado" });
         }
-
-        return res.status(200).json(rows[0]);
+        
+        if (estado === 'Entregado') {
+            const [pedido] = await pool.execute('SELECT id_domiciliario FROM PEDIDO WHERE id_pedido = ?', [id_pedido]);
+            if (pedido[0]?.id_domiciliario) {
+                await pool.execute('UPDATE DOMICILIARIO SET estado = "Disponible" WHERE id_domiciliario = ?', [pedido[0].id_domiciliario]);
+            }
+        }
+        
+        res.json({ mensaje: `Estado actualizado a: ${estado}` });
+        
     } catch (error) {
-        console.error("❌ Error:", error.message);
-        return res.status(500).json({ error: error.message });
+        console.error("❌ Error al actualizar estado:", error.message);
+        res.status(500).json({ error: error.message });
     }
 });
 
 // ==================== ENDPOINTS PARA EMPRESAS ====================
-app.get('/api/pedidos/empresa/:id', async (req, res) => {
-    const idEmpresa = req.params.id;
-    console.log(`📥 Consultando pedidos para empresa ID: ${idEmpresa}`);
-
-    try {
-        const [rows] = await pool.execute(
-            'SELECT id_pedido, total, estado, metodo_pago, fecha FROM PEDIDO WHERE id_empresa = ? ORDER BY id_pedido DESC',
-            [idEmpresa]
-        );
-        return res.status(200).json(rows);
-    } catch (error) {
-        console.error("❌ Error:", error.message);
-        return res.status(500).json({ error: "Error interno del servidor" });
-    }
-});
-
 app.get('/api/empresas/:id/analitica-avanzada', async (req, res) => {
     const id_empresa = req.params.id;
     console.log(`📊 Analítica solicitada para empresa ID: ${id_empresa}`);
@@ -739,58 +812,214 @@ app.get('/api/empresas/:id/estadisticas-productos', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// ==================== ACTUALIZAR ESTADO DEL PEDIDO ====================
-app.put('/api/pedidos/:id/estado', async (req, res) => {
-    const id_pedido = req.params.id;
-    const { estado } = req.body;
+
+// ==================== DOMICILIARIOS ====================
+app.post('/api/domiciliarios/registro', async (req, res) => {
+    console.log("📥 Registro de domiciliario:", req.body);
     
-    const estadosValidos = ['Pendiente', 'Preparacion', 'En camino', 'Entregado', 'Cancelado'];
-    
-    if (!estadosValidos.includes(estado)) {
-        return res.status(400).json({ error: "Estado no válido" });
-    }
+    const { nombre, telefono, email, tipo_vehiculo, contrasena } = req.body;
     
     try {
+        if (!nombre || !telefono || !email || !contrasena) {
+            return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
+        
+        const [existe] = await pool.execute('SELECT id_domiciliario FROM DOMICILIARIO WHERE email = ?', [email]);
+        if (existe.length > 0) {
+            return res.status(400).json({ error: "Este correo ya está registrado" });
+        }
+        
+        const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
+        
         const [resultado] = await pool.execute(
-            'UPDATE PEDIDO SET estado = ? WHERE id_pedido = ?',
-            [estado, id_pedido]
+            `INSERT INTO DOMICILIARIO (nombre, telefono, email, tipo_vehiculo, contraseña, estado) 
+             VALUES (?, ?, ?, ?, ?, 'Disponible')`,
+            [nombre, telefono, email, tipo_vehiculo || 'Moto', contrasenaEncriptada]
         );
         
-        if (resultado.affectedRows === 0) {
-            return res.status(404).json({ error: "Pedido no encontrado" });
-        }
+        res.status(201).json({ 
+            mensaje: "Domiciliario registrado con éxito", 
+            id_domiciliario: resultado.insertId 
+        });
         
-        // Si el estado es Entregado, liberar al domiciliario
-        if (estado === 'Entregado') {
-            const [pedido] = await pool.execute('SELECT id_domiciliario FROM PEDIDO WHERE id_pedido = ?', [id_pedido]);
-            if (pedido[0]?.id_domiciliario) {
-                await pool.execute('UPDATE DOMICILIARIO SET estado = "Disponible" WHERE id_domiciliario = ?', [pedido[0].id_domiciliario]);
-            }
-        }
-        
-        res.json({ mensaje: `Estado actualizado a: ${estado}` });
-        
-    } catch (error) {
-        console.error("❌ Error al actualizar estado:", error.message);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ==================== OBTENER TODOS LOS PEDIDOS (PARA ADMIN) ====================
-app.get('/api/pedidos', async (req, res) => {
-    try {
-        const [pedidos] = await pool.execute(`
-            SELECT p.id_pedido, p.total, p.estado, p.fecha, u.nombre as cliente_nombre, e.nombre as empresa_nombre
-            FROM PEDIDO p
-            INNER JOIN USUARIO u ON p.id_usuario = u.id_usuario
-            INNER JOIN EMPRESA e ON p.id_empresa = e.id_empresa
-            ORDER BY p.id_pedido DESC
-        `);
-        res.json(pedidos);
     } catch (error) {
         console.error("❌ Error:", error.message);
         res.status(500).json({ error: error.message });
     }
+});
+
+// Obtener estado del domiciliario
+app.get('/api/domiciliarios/:id/estado', async (req, res) => {
+    const id = req.params.id;
+    try {
+        const [rows] = await pool.execute('SELECT estado FROM DOMICILIARIO WHERE id_domiciliario = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: "Domiciliario no encontrado" });
+        res.json({ estado: rows[0].estado });
+    } catch (error) {
+        console.error("❌ Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Actualizar estado del domiciliario
+app.put('/api/domiciliarios/:id/estado', async (req, res) => {
+    const id = req.params.id;
+    const { estado } = req.body;
+    console.log(`🔄 Actualizando domiciliario ${id} a estado: ${estado}`);
+    try {
+        const [resultado] = await pool.execute('UPDATE DOMICILIARIO SET estado = ? WHERE id_domiciliario = ?', [estado, id]);
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ error: "Domiciliario no encontrado" });
+        }
+        res.json({ mensaje: "Estado actualizado", estado: estado });
+    } catch (error) {
+        console.error("❌ Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obtener pedidos activos del repartidor
+app.get('/api/domiciliarios/:id/pedidos-activos', async (req, res) => {
+    const id_domiciliario = req.params.id;
+    console.log(`📋 Buscando pedidos activos para repartidor ${id_domiciliario}...`);
+    
+    try {
+        const [pedidos] = await pool.execute(`
+            SELECT 
+                p.id_pedido, 
+                p.total, 
+                p.estado,
+                e.nombre as empresa_nombre,
+                u.nombre as cliente_nombre,
+                u.telefono as cliente_telefono,
+                COALESCE(u.direccion, 'Dirección no registrada') as cliente_direccion
+            FROM PEDIDO p
+            INNER JOIN EMPRESA e ON p.id_empresa = e.id_empresa
+            INNER JOIN USUARIO u ON p.id_usuario = u.id_usuario
+            WHERE p.id_domiciliario = ? AND p.estado IN ('En camino', 'Preparacion')
+            ORDER BY p.id_pedido DESC
+        `, [id_domiciliario]);
+        
+        console.log(`✅ ${pedidos.length} pedidos activos encontrados`);
+        res.json(pedidos);
+        
+    } catch (error) {
+        console.error("❌ Error en pedidos-activos:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obtener historial del repartidor
+app.get('/api/domiciliarios/:id/historial', async (req, res) => {
+    const id_domiciliario = req.params.id;
+    console.log(`📋 Buscando historial para repartidor ${id_domiciliario}...`);
+    
+    try {
+        const [pedidos] = await pool.execute(`
+            SELECT 
+                p.id_pedido, 
+                p.total, 
+                p.fecha,
+                e.nombre as empresa_nombre
+            FROM PEDIDO p
+            INNER JOIN EMPRESA e ON p.id_empresa = e.id_empresa
+            WHERE p.id_domiciliario = ? AND p.estado = 'Entregado'
+            ORDER BY p.id_pedido DESC
+            LIMIT 20
+        `, [id_domiciliario]);
+        
+        console.log(`✅ ${pedidos.length} pedidos completados encontrados`);
+        res.json(pedidos);
+        
+    } catch (error) {
+        console.error("❌ Error en historial:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Asignar pedido a repartidor
+app.put('/api/pedidos/:id/asignar', async (req, res) => {
+    const id_pedido = req.params.id;
+    const { id_domiciliario } = req.body;
+    let conexion;
+    
+    console.log(`🛵 Asignando pedido ${id_pedido} al repartidor ${id_domiciliario}`);
+    
+    try {
+        conexion = await pool.getConnection();
+        await conexion.beginTransaction();
+        
+        const [ped] = await conexion.execute('SELECT estado FROM PEDIDO WHERE id_pedido = ?', [id_pedido]);
+        if (ped.length === 0) throw new Error('Pedido no encontrado');
+        if (ped[0].estado !== 'Pendiente') throw new Error(`El pedido está en estado "${ped[0].estado}"`);
+        
+        const [dom] = await conexion.execute('SELECT estado FROM DOMICILIARIO WHERE id_domiciliario = ?', [id_domiciliario]);
+        if (dom.length === 0) throw new Error('Domiciliario no encontrado');
+        if (dom[0].estado !== 'Disponible') throw new Error('No estás disponible');
+        
+        await conexion.execute(
+            'UPDATE PEDIDO SET id_domiciliario = ?, estado = "En camino" WHERE id_pedido = ?',
+            [id_domiciliario, id_pedido]
+        );
+        await conexion.execute('UPDATE DOMICILIARIO SET estado = "Ocupado" WHERE id_domiciliario = ?', [id_domiciliario]);
+        
+        await conexion.commit();
+        console.log(`✅ Pedido ${id_pedido} asignado exitosamente`);
+        res.json({ mensaje: "Pedido asignado exitosamente" });
+        
+    } catch (error) {
+        if (conexion) await conexion.rollback();
+        console.error("❌ Error:", error.message);
+        res.status(400).json({ error: error.message });
+    } finally {
+        if (conexion) conexion.release();
+    }
+});
+
+// Marcar pedido como entregado
+app.put('/api/pedidos/:id/entregar', async (req, res) => {
+    const id_pedido = req.params.id;
+    let conexion;
+    
+    console.log(`✅ Marcando pedido ${id_pedido} como entregado`);
+    
+    try {
+        conexion = await pool.getConnection();
+        await conexion.beginTransaction();
+        
+        const [ped] = await conexion.execute(
+            'SELECT id_domiciliario, estado FROM PEDIDO WHERE id_pedido = ?',
+            [id_pedido]
+        );
+        
+        if (ped.length === 0) throw new Error('Pedido no encontrado');
+        if (ped[0].estado !== 'En camino') throw new Error(`El pedido está en estado "${ped[0].estado}"`);
+        
+        await conexion.execute('UPDATE PEDIDO SET estado = "Entregado" WHERE id_pedido = ?', [id_pedido]);
+        
+        if (ped[0].id_domiciliario) {
+            await conexion.execute(
+                'UPDATE DOMICILIARIO SET estado = "Disponible" WHERE id_domiciliario = ?',
+                [ped[0].id_domiciliario]
+            );
+        }
+        
+        await conexion.commit();
+        console.log(`✅ Pedido ${id_pedido} entregado`);
+        res.json({ mensaje: "Pedido entregado exitosamente" });
+        
+    } catch (error) {
+        if (conexion) await conexion.rollback();
+        console.error("❌ Error:", error.message);
+        res.status(400).json({ error: error.message });
+    } finally {
+        if (conexion) conexion.release();
+    }
+});
+
+// ==================== ENDPOINT DE PRUEBA ====================
+app.get('/api/test', (req, res) => {
+    res.json({ mensaje: "Servidor funcionando", time: new Date() });
 });
 
 // ==================== INICIAR SERVIDOR ====================
