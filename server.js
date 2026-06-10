@@ -415,23 +415,40 @@ app.post('/api/productos', async (req, res) => {
     }
 });
 
-// ==================== ENDPOINTS DE PEDIDOS (ORDEN CORRECTO) ====================
-
-// PRIMERO: rutas ESPECÍFICAS (sin parámetros variables)
+// ==================== PEDIDOS PENDIENTES CON PRODUCTOS ====================
 app.get('/api/pedidos/pendientes', async (req, res) => {
-    console.log("📋 [PENDIENTES] Consultando pedidos pendientes...");
+    console.log("📋 [PENDIENTES] Consultando pedidos pendientes con productos...");
     try {
         const [pedidos] = await pool.execute(`
-            SELECT p.id_pedido, p.total, e.nombre as empresa_nombre, 
-                   COALESCE(u.direccion, 'Dirección no registrada') as direccion_entrega
+            SELECT 
+                p.id_pedido, 
+                p.total, 
+                e.nombre as empresa_nombre,
+                COALESCE(u.direccion, 'Dirección no registrada') as direccion_entrega,
+                GROUP_CONCAT(pr.nombre SEPARATOR ', ') as productos_nombres
             FROM PEDIDO p
             INNER JOIN EMPRESA e ON p.id_empresa = e.id_empresa
             LEFT JOIN USUARIO u ON p.id_usuario = u.id_usuario
+            LEFT JOIN DETALLE_PEDIDO dp ON p.id_pedido = dp.id_pedido
+            LEFT JOIN PRODUCTO pr ON dp.id_producto = pr.id_producto
             WHERE p.estado = 'Pendiente' AND (p.id_domiciliario IS NULL OR p.id_domiciliario = 0)
+            GROUP BY p.id_pedido, p.total, e.nombre, u.direccion
             ORDER BY p.id_pedido ASC
         `);
-        console.log(`✅ ${pedidos.length} pedidos pendientes encontrados`);
-        res.json(pedidos);
+        
+        // Formatear para que muestre el primer producto o "Varios productos"
+        const pedidosFormateados = pedidos.map(p => ({
+            id_pedido: p.id_pedido,
+            total: p.total,
+            empresa_nombre: p.empresa_nombre,
+            direccion_entrega: p.direccion_entrega,
+            producto_principal: p.productos_nombres ? p.productos_nombres.split(',')[0] : 'Producto',
+            tiene_varios: p.productos_nombres && p.productos_nombres.includes(',')
+        }));
+        
+        console.log(`✅ ${pedidosFormateados.length} pedidos pendientes encontrados`);
+        res.json(pedidosFormateados);
+        
     } catch (error) {
         console.error("❌ Error:", error.message);
         res.status(500).json({ error: error.message });
@@ -937,7 +954,7 @@ app.get('/api/domiciliarios/:id/historial', async (req, res) => {
     }
 });
 
-// Asignar pedido a repartidor
+// Asignar pedido a repartidor - Ahora pasa a PREPARACIÓN, no a EN CAMINO
 app.put('/api/pedidos/:id/asignar', async (req, res) => {
     const id_pedido = req.params.id;
     const { id_domiciliario } = req.body;
@@ -957,15 +974,16 @@ app.put('/api/pedidos/:id/asignar', async (req, res) => {
         if (dom.length === 0) throw new Error('Domiciliario no encontrado');
         if (dom[0].estado !== 'Disponible') throw new Error('No estás disponible');
         
+        // CAMBIO IMPORTANTE: estado a "Preparacion" en lugar de "En camino"
         await conexion.execute(
-            'UPDATE PEDIDO SET id_domiciliario = ?, estado = "En camino" WHERE id_pedido = ?',
+            'UPDATE PEDIDO SET id_domiciliario = ?, estado = "Preparacion" WHERE id_pedido = ?',
             [id_domiciliario, id_pedido]
         );
         await conexion.execute('UPDATE DOMICILIARIO SET estado = "Ocupado" WHERE id_domiciliario = ?', [id_domiciliario]);
         
         await conexion.commit();
-        console.log(`✅ Pedido ${id_pedido} asignado exitosamente`);
-        res.json({ mensaje: "Pedido asignado exitosamente" });
+        console.log(`✅ Pedido ${id_pedido} asignado (ahora en Preparación)`);
+        res.json({ mensaje: "Pedido asignado exitosamente. Esperando confirmación de la empresa." });
         
     } catch (error) {
         if (conexion) await conexion.rollback();
@@ -977,11 +995,12 @@ app.put('/api/pedidos/:id/asignar', async (req, res) => {
 });
 
 // Marcar pedido como entregado
+// Marcar pedido como entregado (SOLO REPARTIDOR)
 app.put('/api/pedidos/:id/entregar', async (req, res) => {
     const id_pedido = req.params.id;
     let conexion;
     
-    console.log(`✅ Marcando pedido ${id_pedido} como entregado`);
+    console.log(`✅ Repartidor marcando pedido ${id_pedido} como entregado`);
     
     try {
         conexion = await pool.getConnection();
@@ -993,7 +1012,7 @@ app.put('/api/pedidos/:id/entregar', async (req, res) => {
         );
         
         if (ped.length === 0) throw new Error('Pedido no encontrado');
-        if (ped[0].estado !== 'En camino') throw new Error(`El pedido está en estado "${ped[0].estado}"`);
+        if (ped[0].estado !== 'En camino') throw new Error(`El pedido está en estado "${ped[0].estado}". Solo se puede entregar si está "En camino".`);
         
         await conexion.execute('UPDATE PEDIDO SET estado = "Entregado" WHERE id_pedido = ?', [id_pedido]);
         
@@ -1007,6 +1026,40 @@ app.put('/api/pedidos/:id/entregar', async (req, res) => {
         await conexion.commit();
         console.log(`✅ Pedido ${id_pedido} entregado`);
         res.json({ mensaje: "Pedido entregado exitosamente" });
+        
+    } catch (error) {
+        if (conexion) await conexion.rollback();
+        console.error("❌ Error:", error.message);
+        res.status(400).json({ error: error.message });
+    } finally {
+        if (conexion) conexion.release();
+    }
+});
+// Empresa marca pedido como listo para entregar (cambia a "En camino")
+app.put('/api/pedidos/:id/listo-para-entregar', async (req, res) => {
+    const id_pedido = req.params.id;
+    let conexion;
+    
+    console.log(`🍳 Empresa marcando pedido ${id_pedido} como listo para entregar`);
+    
+    try {
+        conexion = await pool.getConnection();
+        await conexion.beginTransaction();
+        
+        const [ped] = await conexion.execute(
+            'SELECT id_domiciliario, estado FROM PEDIDO WHERE id_pedido = ?',
+            [id_pedido]
+        );
+        
+        if (ped.length === 0) throw new Error('Pedido no encontrado');
+        if (ped[0].estado !== 'Preparacion') throw new Error(`El pedido está en estado "${ped[0].estado}". Debe estar en Preparación.`);
+        if (!ped[0].id_domiciliario) throw new Error('El pedido no tiene un repartidor asignado');
+        
+        await conexion.execute('UPDATE PEDIDO SET estado = "En camino" WHERE id_pedido = ?', [id_pedido]);
+        
+        await conexion.commit();
+        console.log(`✅ Pedido ${id_pedido} marcado como "En camino"`);
+        res.json({ mensaje: "Pedido marcado como listo para entregar. El repartidor está en camino." });
         
     } catch (error) {
         if (conexion) await conexion.rollback();

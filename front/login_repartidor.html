@@ -9,7 +9,13 @@
 <body>
     <div class="navbar">
         <div class="logo-text">Domi<span>Click</span></div>
-        <div><span id="userName">Repartidor</span> <button class="btn-logout" onclick="logout()">🚪 Salir</button></div>
+        <div class="nav-buttons">
+            <a href="index.html" class="btn-home">🏠 Inicio</a>
+            <div class="user-info">
+                <span>🛵 <span id="userName">Repartidor</span></span>
+                <button class="btn-logout" onclick="logout()">🚪 Salir</button>
+            </div>
+        </div>
     </div>
 
     <div class="container">
@@ -19,9 +25,9 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="cambiarTab('pendientes')">📋 Pendientes</button>
-            <button class="tab-btn" onclick="cambiarTab('activos')">🛵 Mis Entregas</button>
-            <button class="tab-btn" onclick="cambiarTab('completados')">✅ Historial</button>
+            <button class="tab-btn active" data-tab="pendientes">📋 Pedidos Pendientes</button>
+            <button class="tab-btn" data-tab="activos">🛵 Mis Entregas</button>
+            <button class="tab-btn" data-tab="completados">✅ Historial</button>
         </div>
 
         <div id="tab-pendientes" class="tab-content active">
@@ -35,284 +41,283 @@
         </div>
 
         <div id="tab-completados" class="tab-content">
-            <h2>✅ Historial</h2>
+            <h2>✅ Historial de Pedidos</h2>
             <div id="completadosContainer">Cargando...</div>
         </div>
     </div>
 
     <script>
-    let idDomiciliario = null;
-    let estadoActual = 'Disponible';
+        let idDomiciliario = null;
+        let estadoActual = 'Disponible';
 
-    window.onload = async function() {
-        idDomiciliario = localStorage.getItem('id_domiciliario');
-        const nombre = localStorage.getItem('nombre');
-        
-        console.log("=== INICIANDO DASHBOARD REPARTIDOR ===");
-        console.log("ID Repartidor:", idDomiciliario);
-        console.log("Nombre:", nombre);
-        
-        if (!idDomiciliario) {
-            alert("No hay sesión de repartidor");
-            window.location.replace('login.html');
-            return;
+        // Función para cambiar de pestaña
+        function cambiarTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-tab') === tabId) {
+                    btn.classList.add('active');
+                }
+            });
         }
-        
-        document.getElementById('userName').innerText = nombre || 'Repartidor';
-        
-        await cargarEstado();
-        await cargarPendientes();
-        await cargarActivos();
-        await cargarHistorial();
-        
-        // Actualizar cada 10 segundos
-        setInterval(async () => {
+
+        // Configurar eventos de las pestañas
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                cambiarTab(tabId);
+            });
+        });
+
+        window.onload = async function() {
+            idDomiciliario = localStorage.getItem('id_domiciliario');
+            const nombre = localStorage.getItem('nombre');
+            
+            console.log("=== INICIANDO DASHBOARD REPARTIDOR ===");
+            console.log("ID Repartidor:", idDomiciliario);
+            
+            if (!idDomiciliario) {
+                alert("No hay sesión de repartidor");
+                window.location.replace('login.html');
+                return;
+            }
+            
+            document.getElementById('userName').innerText = nombre || 'Repartidor';
+            
+            await cargarEstado();
             await cargarPendientes();
             await cargarActivos();
-        }, 10000);
-    };
-    
-    function cambiarTab(tab) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`tab-${tab}`).classList.add('active');
-        event.target.classList.add('active');
-    }
-    
-    async function cargarEstado() {
-        try {
-            const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/estado`);
-            const data = await res.json();
-            console.log("Estado recibido:", data);
-            estadoActual = data.estado;
+            await cargarHistorial();
             
-            const statusDiv = document.getElementById('statusDisplay');
-            const toggleBtn = document.getElementById('toggleBtn');
-            
-            if (estadoActual === 'Disponible') {
-                statusDiv.className = 'status-disponible';
-                statusDiv.innerHTML = '🟢 Disponible';
-                toggleBtn.innerHTML = '🔴 Marcar Ocupado';
-            } else {
-                statusDiv.className = 'status-ocupado';
-                statusDiv.innerHTML = '🔴 Ocupado';
-                toggleBtn.innerHTML = '🟢 Marcar Disponible';
-            }
-        } catch (error) {
-            console.error("Error cargando estado:", error);
-        }
-    }
-    
-    async function toggleEstado() {
-        const nuevoEstado = estadoActual === 'Disponible' ? 'Ocupado' : 'Disponible';
-        try {
-            const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/estado`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estado: nuevoEstado })
-            });
-            if (res.ok) {
-                estadoActual = nuevoEstado;
-                await cargarEstado();
-                await cargarPendientes();
-            } else {
-                const error = await res.json();
-                alert("Error: " + error.error);
-            }
-        } catch (error) {
-            console.error("Error:", error);
-            alert("Error de conexión");
-        }
-    }
-    
-    async function cargarPendientes() {
-        const container = document.getElementById('pendientesContainer');
-        container.innerHTML = '<div class="no-pedidos">🔄 Cargando pedidos pendientes...</div>';
-        
-        try {
-            console.log("📡 Consultando /api/pedidos/pendientes...");
-            const res = await fetch('http://localhost:5000/api/pedidos/pendientes');
-            
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            
-            const data = await res.json();
-            console.log("📦 Datos recibidos (pendientes):", data);
-            console.log("📦 Cantidad de pedidos:", data.length);
-            
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="no-pedidos">📭 No hay pedidos pendientes</div>';
-                return;
-            }
-            
-            container.innerHTML = data.map(p => `
-                <div class="pedido-card">
-                    <div>
-                        <strong>Pedido #${p.id_pedido}</strong><br>
-                        🏪 ${p.empresa_nombre || 'Empresa'}<br>
-                        📍 ${p.direccion_entrega || 'Sin dirección'}<br>
-                        💰 Total: $${(p.total || 0).toLocaleString()}
-                    </div>
-                    <div>
-                        ${estadoActual === 'Disponible' ? 
-                            `<button class="btn-asignar" onclick="asignarPedido(${p.id_pedido})">🛵 Tomar Pedido</button>` : 
-                            '<button disabled style="background:#ccc; padding:10px; border-radius:8px;">🔴 Ocupado</button>'}
-                    </div>
-                </div>
-            `).join('');
-            
-            console.log("✅ Pendientes renderizados correctamente");
-            
-        } catch (error) {
-            console.error("❌ Error en cargarPendientes:", error);
-            container.innerHTML = `<div class="no-pedidos">❌ Error al cargar: ${error.message}</div>`;
-        }
-    }
-    
-    async function cargarActivos() {
-        const container = document.getElementById('activosContainer');
-        container.innerHTML = '<div class="no-pedidos">🔄 Cargando tus entregas...</div>';
-        
-        try {
-            console.log(`📡 Consultando /api/domiciliarios/${idDomiciliario}/pedidos-activos...`);
-            const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/pedidos-activos`);
-            
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            
-            const data = await res.json();
-            console.log("📦 Datos recibidos (activos):", data);
-            
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="no-pedidos">📭 No tienes entregas activas</div>';
-                return;
-            }
-            
-            container.innerHTML = data.map(p => `
-                <div class="pedido-card">
-                    <div>
-                        <strong>Pedido #${p.id_pedido}</strong><br>
-                        🏪 ${p.empresa_nombre}<br>
-                        👤 Cliente: ${p.cliente_nombre || 'N/A'}<br>
-                        📞 Tel: ${p.cliente_telefono || 'N/A'}<br>
-                        📍 ${p.cliente_direccion || 'Sin dirección'}<br>
-                        🚚 Estado: ${p.estado}
-                    </div>
-                    <div>
-                        <strong>$${(p.total || 0).toLocaleString()}</strong><br>
-                        <button class="btn-entregar" onclick="entregarPedido(${p.id_pedido})">✅ Marcar Entregado</button>
-                    </div>
-                </div>
-            `).join('');
-            
-        } catch (error) {
-            console.error("❌ Error en cargarActivos:", error);
-            container.innerHTML = `<div class="no-pedidos">❌ Error al cargar: ${error.message}</div>`;
-        }
-    }
-    
-    async function cargarHistorial() {
-        const container = document.getElementById('completadosContainer');
-        container.innerHTML = '<div class="no-pedidos">🔄 Cargando historial...</div>';
-        
-        try {
-            console.log(`📡 Consultando /api/domiciliarios/${idDomiciliario}/historial...`);
-            const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/historial`);
-            
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            
-            const data = await res.json();
-            console.log("📦 Datos recibidos (historial):", data);
-            
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="no-pedidos">📭 No hay pedidos completados</div>';
-                return;
-            }
-            
-            container.innerHTML = data.map(p => `
-                <div class="pedido-card">
-                    <div>
-                        <strong>Pedido #${p.id_pedido}</strong><br>
-                        🏪 ${p.empresa_nombre}<br>
-                        📅 ${new Date(p.fecha).toLocaleDateString()}
-                    </div>
-                    <div>
-                        <strong>$${(p.total || 0).toLocaleString()}</strong>
-                    </div>
-                </div>
-            `).join('');
-            
-        } catch (error) {
-            console.error("❌ Error en cargarHistorial:", error);
-            container.innerHTML = `<div class="no-pedidos">❌ Error al cargar: ${error.message}</div>`;
-        }
-    }
-    
-    async function asignarPedido(idPedido) {
-        console.log(`🛵 Intentando asignar pedido ${idPedido} al repartidor ${idDomiciliario}`);
-        
-        try {
-            const res = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/asignar`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_domiciliario: idDomiciliario })
-            });
-            
-            const data = await res.json();
-            console.log("Respuesta asignación:", data);
-            
-            if (res.ok) {
-                alert(`✅ Pedido #${idPedido} asignado a ti!`);
+            setInterval(async () => {
                 await cargarPendientes();
                 await cargarActivos();
-                await cargarEstado();
-                cambiarTab('activos');
-            } else {
-                alert(`❌ ${data.error}`);
-            }
-        } catch (error) {
-            console.error("Error:", error);
-            alert("❌ Error de conexión");
-        }
-    }
-    
-    async function entregarPedido(idPedido) {
-        if (!confirm(`¿Confirmas que entregaste el pedido #${idPedido}?`)) return;
+            }, 10000);
+        };
         
-        console.log(`✅ Marcando pedido ${idPedido} como entregado`);
-        
-        try {
-            const res = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/entregar`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-            const data = await res.json();
-            console.log("Respuesta entrega:", data);
-            
-            if (res.ok) {
-                alert(`✅ Pedido #${idPedido} entregado!`);
-                await cargarActivos();
-                await cargarHistorial();
-                await cargarEstado();
-                await cargarPendientes();
-            } else {
-                alert(`❌ ${data.error}`);
+        async function cargarEstado() {
+            try {
+                const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/estado`);
+                const data = await res.json();
+                estadoActual = data.estado;
+                
+                const statusDiv = document.getElementById('statusDisplay');
+                const toggleBtn = document.getElementById('toggleBtn');
+                
+                if (estadoActual === 'Disponible') {
+                    statusDiv.className = 'status-disponible';
+                    statusDiv.innerHTML = '🟢 Disponible';
+                    toggleBtn.innerHTML = '🔴 Marcar Ocupado';
+                } else {
+                    statusDiv.className = 'status-ocupado';
+                    statusDiv.innerHTML = '🔴 Ocupado';
+                    toggleBtn.innerHTML = '🟢 Marcar Disponible';
+                }
+            } catch (error) {
+                console.error("Error cargando estado:", error);
             }
-        } catch (error) {
-            console.error("Error:", error);
-            alert("❌ Error de conexión");
         }
-    }
-    
-    function logout() {
-        localStorage.clear();
-        window.location.replace('index.html');
-    }
-</script>
+        
+        async function toggleEstado() {
+            const nuevoEstado = estadoActual === 'Disponible' ? 'Ocupado' : 'Disponible';
+            try {
+                const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado: nuevoEstado })
+                });
+                if (res.ok) {
+                    estadoActual = nuevoEstado;
+                    await cargarEstado();
+                    await cargarPendientes();
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+        
+        function obtenerIconoProducto(nombre) {
+            if (!nombre) return '📦';
+            if (nombre.toLowerCase().includes('pizza')) return '🍕';
+            if (nombre.toLowerCase().includes('hamburguesa')) return '🍔';
+            if (nombre.toLowerCase().includes('acetaminofen') || nombre.toLowerCase().includes('dolex')) return '💊';
+            if (nombre.toLowerCase().includes('coca') || nombre.toLowerCase().includes('gaseosa')) return '🥤';
+            return '📦';
+        }
+        
+        async function cargarPendientes() {
+            const container = document.getElementById('pendientesContainer');
+            container.innerHTML = '<div class="no-pedidos">🔄 Cargando pedidos pendientes...</div>';
+            
+            try {
+                const res = await fetch('http://localhost:5000/api/pedidos/pendientes');
+                const data = await res.json();
+                console.log("Pendientes:", data);
+                
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="no-pedidos">📭 No hay pedidos pendientes</div>';
+                    return;
+                }
+                
+                container.innerHTML = data.map(p => {
+                    const icono = obtenerIconoProducto(p.producto_principal || `Pedido #${p.id_pedido}`);
+                    const nombreMostrar = p.tiene_varios ? `${icono} ${p.producto_principal} + más` : `${icono} ${p.producto_principal || `Pedido #${p.id_pedido}`}`;
+                    return `
+                        <div class="pedido-card">
+                            <div class="pedido-info">
+                                <div class="pedido-nombre">${nombreMostrar}</div>
+                                <div class="pedido-empresa">🏪 ${p.empresa_nombre || 'Empresa'}</div>
+                                <div class="pedido-direccion">📍 ${p.direccion_entrega || 'Dirección no registrada'}</div>
+                            </div>
+                            <div class="pedido-precio">
+                                $${(p.total || 0).toLocaleString()}
+                            </div>
+                            <div class="pedido-accion">
+                                ${estadoActual === 'Disponible' ? 
+                                    `<button class="btn-asignar" onclick="asignarPedido(${p.id_pedido})">🛵 Tomar Pedido</button>` : 
+                                    '<button class="btn-ocupado" disabled>🔴 Ocupado</button>'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error("Error:", error);
+                container.innerHTML = '<div class="no-pedidos">❌ Error al cargar pedidos</div>';
+            }
+        }
+        
+        async function cargarActivos() {
+            const container = document.getElementById('activosContainer');
+            container.innerHTML = '<div class="no-pedidos">🔄 Cargando tus entregas...</div>';
+            
+            try {
+                const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/pedidos-activos`);
+                const data = await res.json();
+                console.log("Activos:", data);
+                
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="no-pedidos">📭 No tienes entregas activas</div>';
+                    return;
+                }
+                
+                container.innerHTML = data.map(p => {
+                    return `
+                        <div class="pedido-card">
+                            <div class="pedido-info">
+                                <div class="pedido-nombre">📦 Pedido #${p.id_pedido}</div>
+                                <div class="pedido-empresa">🏪 ${p.empresa_nombre}</div>
+                                <div class="pedido-cliente">👤 ${p.cliente_nombre || 'Cliente'}</div>
+                                <div class="pedido-direccion">📍 ${p.cliente_direccion || 'Sin dirección'}</div>
+                                <div class="pedido-estado">🚚 Estado: ${p.estado === 'Preparacion' ? '🍳 En preparación (esperando restaurante)' : '🛵 En camino'}</div>
+                            </div>
+                            <div class="pedido-precio">
+                                $${(p.total || 0).toLocaleString()}
+                            </div>
+                            <div class="pedido-accion">
+                                ${p.estado === 'En camino' ? 
+                                    `<button class="btn-entregar" onclick="entregarPedido(${p.id_pedido})">✅ Marcar Entregado</button>` : 
+                                    `<button class="btn-ocupado" disabled style="background:#F4A236;">⏳ Esperando confirmación del restaurante</button>`
+                                }
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error("Error:", error);
+                container.innerHTML = '<div class="no-pedidos">❌ Error al cargar tus entregas</div>';
+            }
+        }
+        
+        async function cargarHistorial() {
+            const container = document.getElementById('completadosContainer');
+            container.innerHTML = '<div class="no-pedidos">🔄 Cargando historial...</div>';
+            
+            try {
+                const res = await fetch(`http://localhost:5000/api/domiciliarios/${idDomiciliario}/historial`);
+                const data = await res.json();
+                console.log("Historial:", data);
+                
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="no-pedidos">📭 No hay pedidos completados</div>';
+                    return;
+                }
+                
+                container.innerHTML = data.map(p => {
+                    return `
+                        <div class="pedido-card historial">
+                            <div class="pedido-info">
+                                <div class="pedido-nombre">📦 Pedido #${p.id_pedido}</div>
+                                <div class="pedido-empresa">🏪 ${p.empresa_nombre}</div>
+                                <div class="pedido-fecha">📅 ${new Date(p.fecha).toLocaleDateString()}</div>
+                            </div>
+                            <div class="pedido-precio">
+                                $${(p.total || 0).toLocaleString()}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error("Error:", error);
+                container.innerHTML = '<div class="no-pedidos">❌ Error al cargar historial</div>';
+            }
+        }
+        
+        async function asignarPedido(idPedido) {
+            try {
+                const res = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/asignar`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_domiciliario: idDomiciliario })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`✅ Pedido #${idPedido} asignado! El restaurante lo preparará.`);
+                    await cargarPendientes();
+                    await cargarActivos();
+                    await cargarEstado();
+                    cambiarTab('activos');
+                } else {
+                    alert(`❌ ${data.error}`);
+                }
+            } catch (error) {
+                alert("❌ Error de conexión");
+            }
+        }
+        
+        async function entregarPedido(idPedido) {
+            if (!confirm(`¿Confirmas que entregaste el pedido #${idPedido}?`)) return;
+            try {
+                const res = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/entregar`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`✅ Pedido #${idPedido} entregado! Gracias por tu trabajo.`);
+                    await cargarActivos();
+                    await cargarHistorial();
+                    await cargarEstado();
+                    await cargarPendientes();
+                    cambiarTab('completados');
+                } else {
+                    alert(`❌ ${data.error}`);
+                }
+            } catch (error) {
+                alert("❌ Error de conexión");
+            }
+        }
+        
+        function logout() {
+            localStorage.clear();
+            window.location.replace('index.html');
+        }
+    </script>
 </body>
 </html>

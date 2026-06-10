@@ -38,12 +38,19 @@
         h2 {
             color: #D9643A;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             font-size: 28px;
             border-bottom: 2px solid #F4A236;
             display: inline-block;
             padding-bottom: 10px;
             width: 100%;
+        }
+
+        .subtitulo {
+            text-align: center;
+            color: #8B7A66;
+            margin-bottom: 30px;
+            font-size: 14px;
         }
 
         .grupo-formulario {
@@ -79,22 +86,28 @@
         .btn {
             width: 100%;
             padding: 14px;
+            background: #D9643A;
+            color: white;
             border: none;
             border-radius: 12px;
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s;
+            margin-bottom: 15px;
         }
 
-        .btn-exito {
-            background: #D9643A;
-            color: white;
-        }
-
-        .btn-exito:hover {
+        .btn:hover {
             background: #C25D3A;
             transform: translateY(-2px);
+        }
+
+        .btn-volver {
+            background: #9C8E7B;
+        }
+
+        .btn-volver:hover {
+            background: #3D2B1F;
         }
 
         .json-alerta {

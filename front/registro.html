@@ -2,76 +2,111 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Prueba de Registro - Domicilios Maicao</title>
-    <link rel="stylesheet" href="../css/estilos.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Cliente - DomiClick Maicao</title>
+    <link rel="stylesheet" href="css/registro.css">
 </head>
 <body>
-
-    <nav class="nav-pruebas">
-        <a href="../index.html">Catálogo e Interfaz de Compra</a> | 
-        <a href="registro.html">Módulo Registro</a>
-    </nav>
-
     <div class="contenedor">
-        <h2>Módulo de Registro de Clientes</h2>
-        <p>Pruebe el almacenamiento dinámico directamente en la base de datos <strong>desde_casa</strong>.</p>
+        <h2>🛍️ Crear Cuenta</h2>
+        <div class="subtitulo">Regístrate para empezar a pedir en Maicao</div>
         
         <form id="formRegistro">
             <div class="grupo-formulario">
-                <label>Nombre Completo:</label>
-                <input type="text" id="regNombre" required placeholder="Ej. Mateo Carrillo">
+                <label>📛 Nombre Completo</label>
+                <input type="text" id="regNombre" placeholder="Ej. Mateo Carrillo" required>
             </div>
+            
             <div class="grupo-formulario">
-                <label>Teléfono de Contacto:</label>
-                <input type="text" id="regTelefono" required placeholder="Ej. 3001234567">
+                <label>📞 Teléfono de Contacto</label>
+                <input type="tel" id="regTelefono" placeholder="3001234567" required>
             </div>
+            
             <div class="grupo-formulario">
-                <label>Correo Electrónico:</label>
-                <input type="email" id="regEmail" required placeholder="correo@ejemplo.com">
+                <label>📧 Correo Electrónico</label>
+                <input type="email" id="regEmail" placeholder="correo@ejemplo.com" required>
             </div>
+            
             <div class="grupo-formulario">
-                <label>📍 Dirección de Entrega:</label>
+                <label>📍 Dirección de Entrega</label>
                 <input type="text" id="regDireccion" placeholder="Calle, número, barrio, referencia">
             </div>
+            
             <div class="grupo-formulario">
-                <label>Contraseña de Acceso:</label>
-                <input type="password" id="regContrasena" required placeholder="••••••••">
+                <label>🔒 Contraseña</label>
+                <input type="password" id="regContrasena" placeholder="Mínimo 6 caracteres" required>
             </div>
+            
             <div class="grupo-formulario">
-                <label>Método de Pago Preferido:</label>
+                <label>💳 Método de Pago Preferido</label>
                 <select id="regmetodoPago">
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="Nequi">Nequi</option>
-                    <option value="Daviplata">Daviplata</option>
+                    <option value="Efectivo">💰 Efectivo</option>
+                    <option value="Nequi">📱 Nequi</option>
+                    <option value="Daviplata">📱 Daviplata</option>
+                    <option value="Tarjeta">💳 Tarjeta de crédito/débito</option>
                 </select>
             </div>
             
-            <button type="submit" class="btn">Registrar Usuario en MySQL</button>
+            <button type="submit" class="btn">✅ Registrarme</button>
+            <button type="button" class="btn btn-volver" onclick="window.location.href='index.html'">🏠 Volver al Inicio</button>
         </form>
-
-        <h3>Respuesta de Node.js:</h3>
-        <div id="resultadoRegistro" class="json-alerta">Esperando acción...</div>
+        
+        <div id="alertaCliente" class="json-alerta">Complete el formulario para registrarse</div>
+        
+        <div class="link-login">
+            ¿Ya tienes cuenta? <a href="login.html">Iniciar sesión</a>
+        </div>
     </div>
 
     <script>
         document.getElementById('formRegistro').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const alerta = document.getElementById('alertaCliente');
+            const btn = document.querySelector('.btn:first-of-type');
+            
+            // Validar contraseña
+            const contrasena = document.getElementById('regContrasena').value;
+            if (contrasena.length < 6) {
+                alerta.innerHTML = "⚠️ La contraseña debe tener al menos 6 caracteres";
+                alerta.className = "json-alerta error";
+                return;
+            }
+            
+            // Validar email
+            const email = document.getElementById('regEmail').value;
+            if (!email.includes('@')) {
+                alerta.innerHTML = "⚠️ Ingrese un correo electrónico válido";
+                alerta.className = "json-alerta error";
+                return;
+            }
+            
+            // Validar teléfono
+            const telefono = document.getElementById('regTelefono').value;
+            if (telefono.length < 7) {
+                alerta.innerHTML = "⚠️ Ingrese un número de teléfono válido";
+                alerta.className = "json-alerta error";
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerText = "⏳ Registrando...";
+            alerta.innerHTML = "🔄 Enviando datos al servidor...";
+            alerta.className = "json-alerta";
+            
+            const payload = {
+                nombre: document.getElementById('regNombre').value,
+                telefono: telefono,
+                email: email,
+                contrasena: contrasena,
+                metodo_pago: document.getElementById('regmetodoPago').value,
+                direccion: document.getElementById('regDireccion').value || 'Dirección no registrada',
+                rol: 'Cliente'
+            };
+            
+            console.log("📦 Payload enviado:", payload);
+            
             try {
-                // CORRECCIÓN 1: Estructuramos el payload apuntando a los IDs correctos del HTML
-                const payload = {
-    nombre: document.getElementById('regNombre').value,
-    telefono: document.getElementById('regTelefono').value,
-    email: document.getElementById('regEmail').value,
-    contrasena: document.getElementById('regContrasena').value,
-    metodo_pago: document.getElementById('regmetodoPago').value,
-    direccion: document.getElementById('regDireccion').value  // Nuevo campo
-};
-
-                // Imprimimos en la consola del navegador para certificar que el HTML empaquetó todo bien
-                console.log("📤 Enviando datos desde el formulario:", payload);
-                
-                // CORRECCIÓN 2: Añadimos la dirección absoluta con el puerto 5000
                 const respuesta = await fetch('http://localhost:5000/api/usuarios', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -79,18 +114,33 @@
                 });
                 
                 const data = await respuesta.json();
+                console.log("📥 Respuesta del servidor:", data);
                 
-                // Mostrar la respuesta estética en el recuadro asignado
-                document.getElementById('resultadoRegistro').innerText = JSON.stringify(data, null, 2);
-                
-                // Si el registro es exitoso, limpiar el formulario para una nueva prueba
-                if (respuesta.status === 201) {
+                if (respuesta.ok) {
+                    alerta.innerHTML = `
+                        ✅ <strong>¡Registro Exitoso!</strong><br>
+                        Bienvenido ${payload.nombre}.<br>
+                        Ya puedes iniciar sesión con tu correo y contraseña.
+                    `;
+                    alerta.className = "json-alerta exito";
+                    
                     document.getElementById('formRegistro').reset();
+                    
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2500);
+                } else {
+                    alerta.innerHTML = `❌ ${data.error || "Error al registrar. Intenta nuevamente."}`;
+                    alerta.className = "json-alerta error";
                 }
-
+                
             } catch (error) {
-                console.error("❌ Error en el flujo del Frontend:", error);
-                document.getElementById('resultadoRegistro').innerText = "Error en el formulario: " + error.message;
+                console.error("Error de red:", error);
+                alerta.innerHTML = "❌ Error crítico: No se pudo conectar con el servidor. ¿El servidor está corriendo?";
+                alerta.className = "json-alerta error";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "✅ Registrarme";
             }
         });
     </script>

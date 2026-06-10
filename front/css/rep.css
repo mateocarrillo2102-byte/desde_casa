@@ -1,145 +1,336 @@
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ============================================
+           ESTILOS REPARTIDOR - DOMICLICK MAICAO
+           ============================================ */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #FDF8F0 0%, #F5EDE0 100%);
-            padding: 20px;
+            min-height: 100vh;
         }
+
+        :root {
+            --desert-terracota: #D9643A;
+            --desert-cactus: #5A8F4C;
+            --desert-sun: #F4A236;
+            --desert-dark: #3D2B1F;
+            --desert-stone: #9C8E7B;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        /* Navbar */
         .navbar {
             background: linear-gradient(135deg, #3D2B1F 0%, #4A3728 100%);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
-        .logo-text { font-size: 24px; font-weight: 800; color: white; }
-        .logo-text span { color: #F4A236; }
-        .btn-logout {
-            background: transparent;
-            border: 1px solid #D9643A;
-            color: #D9643A;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .status-card {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .status-disponible { background: #D4EDDA; color: #5A8F4C; display: inline-block; padding: 10px 25px; border-radius: 40px; }
-        .status-ocupado { background: #F8D7DA; color: #D9643A; display: inline-block; padding: 10px 25px; border-radius: 40px; }
-        .btn-toggle {
-            background: #5A8F4C;
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 30px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn {
-            padding: 10px 20px;
-            background: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-        }
-        .tab-btn.active { background: #D9643A; color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .pedido-card {
-            background: white;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
+            padding: 12px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
+            border-bottom: 3px solid var(--desert-sun);
+            box-shadow: var(--shadow-md);
         }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 800;
+            color: white;
+        }
+
+        .logo-text span {
+            color: var(--desert-sun);
+        }
+
+        .nav-buttons {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-home {
+            background: transparent;
+            border: 1px solid var(--desert-sun);
+            color: var(--desert-sun);
+            padding: 6px 14px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .btn-home:hover {
+            background: var(--desert-sun);
+            color: var(--desert-dark);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 30px;
+        }
+
+        .user-info span {
+            color: white;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--desert-terracota);
+            color: var(--desert-terracota);
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+
+        .btn-logout:hover {
+            background: var(--desert-terracota);
+            color: white;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 25px;
+        }
+
+        /* Status Card */
+        .status-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+        }
+
+        .status-disponible {
+            background: #D4EDDA;
+            color: var(--desert-cactus);
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .status-ocupado {
+            background: #F8D7DA;
+            color: var(--desert-terracota);
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .btn-toggle {
+            background: var(--desert-cactus);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            margin-left: 10px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--desert-sand);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 24px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            color: var(--desert-dark);
+        }
+
+        .tab-btn.active {
+            background: var(--desert-terracota);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            color: var(--desert-dark);
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Pedido Card */
+        .pedido-card {
+            background: white;
+            border-radius: 16px;
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s;
+        }
+
+        .pedido-card:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .pedido-info {
+            flex: 2;
+            min-width: 180px;
+        }
+
+        .pedido-nombre {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--desert-dark);
+            margin-bottom: 4px;
+        }
+
+        .pedido-empresa, .pedido-cliente, .pedido-direccion, .pedido-fecha, .pedido-estado {
+            font-size: 12px;
+            color: var(--desert-stone);
+            margin-top: 2px;
+        }
+
+        .pedido-precio {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--desert-cactus);
+            text-align: right;
+            min-width: 100px;
+            background: #F0F7ED;
+            padding: 6px 12px;
+            border-radius: 30px;
+            display: inline-block;
+        }
+
+        .pedido-accion {
+            min-width: 120px;
+            text-align: right;
+        }
+
         .btn-asignar, .btn-entregar {
-            background: #5A8F4C;
+            background: var(--desert-cactus);
             color: white;
             border: none;
             padding: 8px 16px;
-            border-radius: 8px;
+            border-radius: 30px;
             cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s;
+            width: 100%;
         }
-        .btn-entregar { background: #F4A236; color: #3D2B1F; }
-        .no-pedidos { text-align: center; padding: 40px; background: white; border-radius: 15px; color: #9C8E7B; }
-        h2 { margin-bottom: 15px; color: #3D2B1F; }
-        /* Estilos básicos para pedidos */
-.pedido-card {
-    background: white;
-    border-radius: 15px;
-    padding: 15px;
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border-left: 4px solid #F4A236;
-}
 
-.btn-asignar {
-    background: #5A8F4C;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-}
+        .btn-asignar:hover, .btn-entregar:hover {
+            background: #4A7A3D;
+            transform: scale(1.02);
+        }
 
-.btn-entregar {
-    background: #F4A236;
-    color: #3D2B1F;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-}
+        .btn-entregar {
+            background: var(--desert-sun);
+            color: var(--desert-dark);
+        }
 
-.no-pedidos {
-    text-align: center;
-    padding: 40px;
-    background: white;
-    border-radius: 15px;
-    color: #9C8E7B;
-}
+        .btn-ocupado {
+            background: #e0e0e0;
+            color: #999;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 12px;
+            width: 100%;
+        }
 
-.status-disponible {
-    background: #D4EDDA;
-    color: #5A8F4C;
-    padding: 10px 20px;
-    border-radius: 30px;
-    display: inline-block;
-}
+        .pedido-card.historial {
+            border-left: 3px solid var(--desert-cactus);
+            background: #FEFEFE;
+        }
 
-.status-ocupado {
-    background: #F8D7DA;
-    color: #D9643A;
-    padding: 10px 20px;
-    border-radius: 30px;
-    display: inline-block;
-}
+        .no-pedidos {
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 16px;
+            color: var(--desert-stone);
+            font-size: 13px;
+            box-shadow: var(--shadow-sm);
+        }
 
-.btn-toggle {
-    background: #5A8F4C;
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 30px;
-    cursor: pointer;
-    margin-left: 10px;
-}
+        @media (max-width: 700px) {
+            .navbar {
+                flex-direction: column;
+                text-align: center;
+            }
+            .nav-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+            .user-info {
+                width: 100%;
+                justify-content: center;
+            }
+            .pedido-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            .pedido-precio {
+                text-align: center;
+                display: inline-block;
+            }
+            .pedido-accion {
+                width: 100%;
+            }
+            .tabs {
+                justify-content: center;
+            }
+        }

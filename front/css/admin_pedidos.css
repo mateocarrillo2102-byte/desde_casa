@@ -1,0 +1,261 @@
+/* ============================================
+   ADMIN PEDIDOS - DOMICLICK MAICAO
+   Estilo Desértico
+   ============================================ */
+
+:root {
+    --desert-sand: #E8D5B5;
+    --desert-terracota: #D9643A;
+    --desert-cactus: #5A8F4C;
+    --desert-sun: #F4A236;
+    --desert-sunset: #C25D3A;
+    --desert-dark: #3D2B1F;
+    --desert-stone: #9C8E7B;
+    --desert-cream: #FFF5E6;
+    --bg-light: #FDF8F0;
+    --text-dark: #2C2418;
+    --text-muted: #8B7A66;
+    --success: #5A8F4C;
+    --warning: #F4A236;
+    --danger: #D9643A;
+    --info: #6BA5B5;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--bg-light) 0%, #F5EDE0 100%);
+    min-height: 100vh;
+    padding: 30px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Botón volver */
+.btn-volver {
+    display: inline-block;
+    background: var(--desert-stone);
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    margin-bottom: 25px;
+    font-weight: 600;
+    transition: all 0.3s;
+    font-size: 14px;
+}
+
+.btn-volver:hover {
+    background: var(--desert-dark);
+    transform: translateX(-3px);
+}
+
+/* Título */
+h1 {
+    color: var(--desert-dark);
+    margin-bottom: 25px;
+    font-size: 28px;
+    border-left: 4px solid var(--desert-terracota);
+    padding-left: 15px;
+}
+
+/* Grid de pedidos */
+.pedidos-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Tarjeta de pedido */
+.pedido-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px 25px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    transition: all 0.3s;
+    border-left: 4px solid var(--desert-sun);
+}
+
+.pedido-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Información del pedido */
+.pedido-info {
+    flex: 2;
+    min-width: 200px;
+}
+
+.pedido-id {
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--desert-terracota);
+    margin-bottom: 5px;
+}
+
+.pedido-info div {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+
+/* Total */
+.pedido-total {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--desert-cactus);
+    min-width: 120px;
+    text-align: right;
+}
+
+/* Estado */
+.pedido-estado {
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    min-width: 110px;
+}
+
+.estado-Pendiente {
+    background: var(--desert-sun);
+    color: var(--desert-dark);
+}
+
+.estado-Preparacion {
+    background: var(--info);
+    color: white;
+}
+
+.estado-En\ camino {
+    background: #9C27B0;
+    color: white;
+}
+
+.estado-Entregado {
+    background: var(--desert-cactus);
+    color: white;
+}
+
+.estado-Cancelado {
+    background: var(--desert-terracota);
+    color: white;
+}
+
+/* Botones de acción */
+.pedido-card > div:last-child {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 200px;
+    justify-content: flex-end;
+}
+
+.btn-estado {
+    background: #F0E6D8;
+    color: var(--desert-dark);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.btn-estado:hover {
+    background: var(--desert-terracota);
+    color: white;
+    transform: scale(1.02);
+}
+
+/* Mensaje vacío */
+.pedidos-grid > p {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    body {
+        padding: 20px;
+    }
+    
+    .pedido-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .pedido-total {
+        text-align: center;
+    }
+    
+    .pedido-estado {
+        width: 100%;
+        max-width: 150px;
+        margin: 0 auto;
+    }
+    
+    .pedido-card > div:last-child {
+        justify-content: center;
+    }
+    
+    .btn-estado {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 600px) {
+    .pedido-card > div:last-child {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-estado {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--desert-sand);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--desert-terracota);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--desert-sunset);
+}

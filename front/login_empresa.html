@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
-
     <div class="dashboard-container">
         
         <div class="header-top">
@@ -17,7 +16,6 @@
             </div>
             <div style="display: flex; gap: 10px;">
                 <a href="gestion_productos.html" class="btn-action">📦 Gestionar Catálogo</a>
-                <a href="admin_pedidos.html" class="btn-action" style="background: #5A8F4C;">📋 Gestionar Pedidos</a>
                 <button onclick="logout()" class="btn-action" style="background-color: #ff4c4c;">
                     🚪 Cerrar Sesión
                 </button>
@@ -46,8 +44,8 @@
                     <canvas id="chartDona"></canvas>
                 </div>
                 <ul class="list-data">
-                    <li class="list-item"><span>🟣 Completado</span><strong id="txtCompleto">0</strong></li>
-                    <li class="list-item"><span>🟢 En Proceso</span><strong id="txtProceso">0</strong></li>
+                    <li class="list-item"><span>🟢 Completado</span><strong id="txtCompleto">0</strong></li>
+                    <li class="list-item"><span>🟡 En Proceso</span><strong id="txtProceso">0</strong></li>
                     <li class="list-item"><span>🔴 Cancelado</span><strong id="txtCancelado">0</strong></li>
                 </ul>
             </div>
@@ -57,16 +55,19 @@
         <div class="grid-layout">
             
             <div class="card">
-                <h3 class="card-title">📋 Órdenes Recientes</h3>
-                <div id="listaPedidosFisica" style="margin-top: 15px;">
-                    <p style="color: #999;">Cargando pedidos...</p>
+                <h3 class="card-title">
+                    📋 Órdenes Recientes
+                    <span style="font-size: 12px; color: var(--text-muted);">(Click en estado para cambiar)</span>
+                </h3>
+                <div id="listaPedidosFisica" class="pedidos-lista">
+                    <p style="color: #999; text-align: center; padding: 20px;">Cargando pedidos...</p>
                 </div>
             </div>
 
             <div class="card">
                 <h3 class="card-title">
                     🏆 Best Selling Product
-                    <button onclick="verProductosMasVendidos()" class="btn-action btn-secondary" style="padding: 5px 12px; font-size: 12px;">
+                    <button onclick="verProductosMasVendidos()" class="btn-action" style="padding: 5px 12px; font-size: 12px; background: var(--desert-stone);">
                         Ver todos 📊
                     </button>
                 </h3>
@@ -74,7 +75,7 @@
                     <div class="product-img">🏆</div>
                     <div>
                         <strong id="txtBestSellerNombre" style="font-size: 18px;">Cargando...</strong>
-                        <div id="txtBestSellerPrecio" style="color: #4a6eff; font-weight: 700; margin-top: 5px;">$0</div>
+                        <div id="txtBestSellerPrecio" style="color: var(--desert-terracota); font-weight: 700; margin-top: 5px;">$0</div>
                         <div id="txtBestSellerUnidades" style="color: #666; font-size: 12px; margin-top: 5px;">Unidades vendidas: 0</div>
                     </div>
                 </div>
@@ -100,10 +101,24 @@
     <script>
     let chartBarras = null;
     let chartDona = null;
-    let datosCompletos = null; // Guardar datos para el modal
+    let datosCompletos = null;
+
+    // Mapeo de estados y su orden
+    const ordenEstados = {
+        'Pendiente': 1,
+        'Preparacion': 2,
+        'En camino': 3,
+        'Entregado': 4
+    };
+
+    const estadosSiguientes = {
+        'Pendiente': 'Preparacion',
+        'Preparacion': 'En camino',
+        'En camino': 'Entregado',
+        'Entregado': 'Entregado'
+    };
 
     window.onload = async function() {
-        // Obtener ID real de la empresa
         let idEmpresa = localStorage.getItem('id_empresa');
         let idUsuario = localStorage.getItem('id_usuario');
         let rol = localStorage.getItem('rol');
@@ -138,21 +153,17 @@
             }
             
             datosCompletos = await respuesta.json();
-            console.log("Datos recibidos:", datosCompletos);
             
-            // Actualizar UI
             document.getElementById('lblNombreEmpresa').innerText = `🏪 ${datosCompletos.nombre || 'Mi Empresa'}`;
             document.getElementById('lblTipoEmpresa').innerText = `Establecimiento: ${datosCompletos.tipo || 'Comercio'}`;
             document.getElementById('txtTotalRevenue').innerText = `$${parseFloat(datosCompletos.resumenFinanciero?.revenueTotal || 0).toLocaleString('es-CO')}`;
             
-            // Actualizar best seller
             if (datosCompletos.bestSeller) {
                 document.getElementById('txtBestSellerNombre').innerText = datosCompletos.bestSeller.nombre || 'Sin datos';
                 document.getElementById('txtBestSellerPrecio').innerText = `$${parseFloat(datosCompletos.bestSeller.precio || 0).toLocaleString('es-CO')}`;
                 document.getElementById('txtBestSellerUnidades').innerText = `Unidades vendidas: ${datosCompletos.bestSeller.unidades || 0}`;
             }
             
-            // Actualizar gráfico de dona
             if (datosCompletos.graficoDona) {
                 document.getElementById('txtCompleto').innerText = datosCompletos.graficoDona.completados || 0;
                 document.getElementById('txtProceso').innerText = datosCompletos.graficoDona.procesando || 0;
@@ -160,12 +171,10 @@
                 crearGraficoDona(datosCompletos.graficoDona);
             }
             
-            // Crear gráfico de barras
             if (datosCompletos.graficoBarras) {
                 crearGraficoBarras(datosCompletos.graficoBarras);
             }
             
-            // Cargar lista de pedidos
             await cargarListaPedidos(idEmpresa);
             
         } catch (error) {
@@ -181,23 +190,92 @@
             const pedidos = await res.json();
             
             if (!Array.isArray(pedidos) || pedidos.length === 0) {
-                listaContenedor.innerHTML = '<p style="color: #999;">📭 No hay pedidos registrados</p>';
+                listaContenedor.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">📭 No hay pedidos registrados</p>';
                 return;
             }
             
-            listaContenedor.innerHTML = pedidos.slice(0, 5).map(pedido => `
+            listaContenedor.innerHTML = pedidos.map(pedido => `
                 <div class="pedido-item">
-                    <div><strong>Pedido #${pedido.id_pedido}</strong></div>
-                    <div>💰 Total: $${parseFloat(pedido.total || 0).toLocaleString('es-CO')}</div>
-                    <div>📊 Estado: ${pedido.estado || 'Pendiente'}</div>
-                    <div>📅 Fecha: ${pedido.fecha ? new Date(pedido.fecha).toLocaleDateString() : 'N/A'}</div>
+                    <div class="pedido-header">
+                        <span class="pedido-id">Pedido #${pedido.id_pedido}</span>
+                        <span class="pedido-total">$${parseFloat(pedido.total || 0).toLocaleString('es-CO')}</span>
+                    </div>
+                    <div class="pedido-info">
+                        <span>💳 ${pedido.metodo_pago || 'Efectivo'}</span>
+                        <span>📅 ${pedido.fecha ? new Date(pedido.fecha).toLocaleString() : 'N/A'}</span>
+                        <span class="pedido-estado estado-${(pedido.estado || 'Pendiente').replace(/ /g, '\\ ')}">${pedido.estado || 'Pendiente'}</span>
+                    </div>
+                    <div class="pedido-acciones">
+                        ${pedido.estado === 'Preparacion' ? 
+                            `<button class="btn-estado" onclick="marcarListoParaEntregar(${pedido.id_pedido})" style="background:#F4A236;">
+                                🚚 Marcar como Listo para Entregar
+                            </button>` : ''
+                        }
+                        ${pedido.estado === 'Pendiente' ? 
+                            `<button class="btn-estado" onclick="cambiarEstadoPedido(${pedido.id_pedido}, 'Preparacion')" style="background:#5A8F4C; color:white;">
+                                🍳 Comenzar Preparación
+                            </button>` : ''
+                        }
+                        ${pedido.estado !== 'Cancelado' && pedido.estado !== 'Entregado' && pedido.estado !== 'En camino' && pedido.estado !== 'Preparacion' ? 
+                            `<button class="btn-estado" onclick="cambiarEstadoPedido(${pedido.id_pedido}, 'Cancelado')" style="background:#ffcccc; color:#D9643A;">
+                                ❌ Cancelar
+                            </button>` : ''
+                        }
+                    </div>
                 </div>
             `).join('');
             
         } catch (err) {
             console.error("Error:", err);
-            listaContenedor.innerHTML = '<p style="color: #ff4c4c;">❌ Error al cargar pedidos</p>';
+            listaContenedor.innerHTML = '<p style="color: #ff4c4c; text-align: center; padding: 20px;">❌ Error al cargar pedidos</p>';
         }
+    }
+
+    async function cambiarEstadoPedido(idPedido, nuevoEstado) {
+        try {
+            const response = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                mostrarMensajeExito(`✅ Pedido #${idPedido} actualizado a: ${nuevoEstado}`);
+                // Recargar datos
+                const idEmpresa = localStorage.getItem('id_empresa');
+                await cargarDashboard(idEmpresa);
+            } else {
+                mostrarMensajeError(`❌ ${data.error || "Error al actualizar"}`);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            mostrarMensajeError("❌ Error de conexión");
+        }
+    }
+    async function marcarListoParaEntregar(idPedido) {
+    if (!confirm(`¿Confirmas que el pedido #${idPedido} está listo para que el repartidor lo recoja?`)) return;
+    
+    try {
+        const response = await fetch(`http://localhost:5000/api/pedidos/${idPedido}/listo-para-entregar`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            mostrarMensajeExito(`✅ Pedido #${idPedido} marcado como "En camino". El repartidor ha sido notificado.`);
+            const idEmpresa = localStorage.getItem('id_empresa');
+            await cargarDashboard(idEmpresa);
+        } else {
+            mostrarMensajeError(`❌ ${data.error || "Error al actualizar"}`);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        mostrarMensajeError("❌ Error de conexión");
+    }
     }
 
     function crearGraficoBarras(datos) {
@@ -214,7 +292,7 @@
                 datasets: [{
                     label: 'Ventas ($)',
                     data: datos.valores || [0, 0, 0, 0, 0, 0],
-                    backgroundColor: '#4a6eff',
+                    backgroundColor: '#D9643A',
                     borderRadius: 8
                 }]
             },
@@ -241,7 +319,7 @@
                 labels: ['Completados', 'En Proceso', 'Cancelados'],
                 datasets: [{
                     data: [datos.completados || 0, datos.procesando || 0, datos.cancelados || 0],
-                    backgroundColor: ['#4a6eff', '#ffc107', '#ff4c4c'],
+                    backgroundColor: ['#5A8F4C', '#F4A236', '#D9643A'],
                     borderWidth: 0
                 }]
             },
@@ -255,12 +333,10 @@
         });
     }
 
-    // Función para ver todos los productos más vendidos
     async function verProductosMasVendidos() {
         const modal = document.getElementById('modalProductos');
         const listaContainer = document.getElementById('listaProductosModal');
         
-        // Mostrar modal con loading
         modal.style.display = 'flex';
         listaContainer.innerHTML = '<p style="color: #999;">Cargando productos...</p>';
         
@@ -279,7 +355,6 @@
                 return;
             }
             
-            // Mostrar lista de productos
             listaContainer.innerHTML = productos.map((producto, index) => `
                 <div class="producto-item">
                     <div class="producto-rank">#${index + 1}</div>
@@ -302,11 +377,19 @@
     }
 
     function mostrarMensajeError(mensaje) {
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #ff4c4c; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999;';
-        errorDiv.innerText = mensaje;
-        document.body.appendChild(errorDiv);
-        setTimeout(() => errorDiv.remove(), 3000);
+        const toast = document.createElement('div');
+        toast.style.cssText = `position: fixed; bottom: 20px; right: 20px; background: #D9643A; color: white; padding: 12px 20px; border-radius: 10px; z-index: 9999; animation: fadeIn 0.3s ease;`;
+        toast.innerText = mensaje;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function mostrarMensajeExito(mensaje) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `position: fixed; bottom: 20px; right: 20px; background: #5A8F4C; color: white; padding: 12px 20px; border-radius: 10px; z-index: 9999; animation: fadeIn 0.3s ease;`;
+        toast.innerText = mensaje;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
     }
 
     function logout() {
@@ -314,7 +397,6 @@
         window.location.replace('login.html');
     }
 
-    // Cerrar modal al hacer clic fuera
     window.onclick = function(event) {
         const modal = document.getElementById('modalProductos');
         if (event.target === modal) {
